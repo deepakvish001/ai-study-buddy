@@ -113,6 +113,7 @@ export type Database = {
           display_name: string | null
           id: string
           reputation: number
+          reviews_completed: number
           updated_at: string
           user_id: string
         }
@@ -123,6 +124,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           reputation?: number
+          reviews_completed?: number
           updated_at?: string
           user_id: string
         }
@@ -133,6 +135,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           reputation?: number
+          reviews_completed?: number
           updated_at?: string
           user_id?: string
         }
@@ -235,6 +238,14 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      manage_user_role: {
+        Args: {
+          _action: string
+          _role: Database["public"]["Enums"]["app_role"]
+          _target_user_id: string
+        }
+        Returns: undefined
       }
     }
     Enums: {
