@@ -25,6 +25,24 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const { data: existingAnswer, error: existingAnswerError } = await supabase
+      .from("answers")
+      .select("id, confidence, status")
+      .eq("question_id", questionId)
+      .eq("is_ai", true)
+      .maybeSingle();
+
+    if (existingAnswerError) {
+      console.error("Existing answer lookup error:", existingAnswerError);
+      throw existingAnswerError;
+    }
+
+    if (existingAnswer) {
+      return new Response(JSON.stringify({ success: true, confidence: existingAnswer.confidence, status: existingAnswer.status, existing: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const systemPrompt = `You are an expert academic tutor on the DoubtSolver platform. Your job is to answer students' doubts clearly and accurately.
 
 Rules:
@@ -78,7 +96,6 @@ Use "low" if the question is ambiguous, complex, or you are unsure.`;
     const aiData = await response.json();
     let answerText = aiData.choices?.[0]?.message?.content ?? "I couldn't generate an answer. Please try again.";
 
-    // Extract confidence
     let confidence: "high" | "medium" | "low" = "medium";
     const confidenceMatch = answerText.match(/CONFIDENCE:\s*(high|medium|low)/i);
     if (confidenceMatch) {
@@ -86,10 +103,8 @@ Use "low" if the question is ambiguous, complex, or you are unsure.`;
       answerText = answerText.replace(/\n?CONFIDENCE:\s*(high|medium|low)/i, "").trim();
     }
 
-    // Determine status: low confidence goes to review
     const status = confidence === "low" ? "pending" : "approved";
 
-    // Save the AI answer
     const { error: insertError } = await supabase.from("answers").insert({
       question_id: questionId,
       user_id: null,
