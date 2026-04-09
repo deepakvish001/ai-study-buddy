@@ -69,7 +69,7 @@ export default function Browse() {
     queryFn: async () => {
       let query = supabase
         .from("questions")
-        .select("id, title, body, tags, status, created_at, user_id, answers(id)")
+        .select("id, title, body, tags, status, created_at, user_id, answers(id, upvotes)")
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (debouncedSearch) query = query.ilike("title", `%${debouncedSearch}%`);
@@ -89,12 +89,35 @@ export default function Browse() {
       const { data: profiles } = await supabase.from("profiles").select("user_id, display_name").in("user_id", userIds);
       const profileMap = Object.fromEntries((profiles ?? []).map(p => [p.user_id, p.display_name]));
 
-      let sorted = data;
+      let sorted = [...data];
       if (sort === "unanswered" || statusTab === "unanswered") {
         sorted = data.filter(q => !q.answers?.length).concat(data.filter(q => q.answers?.length));
+      } else if (sort === "popular") {
+        sorted.sort((a, b) => {
+          const scoreA = (a.answers?.length ?? 0) + (a.answers?.reduce((s: number, ans: any) => s + (ans.upvotes ?? 0), 0) ?? 0);
+          const scoreB = (b.answers?.length ?? 0) + (b.answers?.reduce((s: number, ans: any) => s + (ans.upvotes ?? 0), 0) ?? 0);
+          return scoreB - scoreA;
+        });
       }
 
       return { questions: sorted, profiles: profileMap };
+    },
+  });
+
+  // Fetch counts for tabs
+  const { data: tabCounts } = useQuery({
+    queryKey: ["browse-tab-counts", debouncedSearch, activeTag],
+    queryFn: async () => {
+      let baseQuery = supabase.from("questions").select("id, status, answers(id)", { count: "exact" });
+      if (debouncedSearch) baseQuery = baseQuery.ilike("title", `%${debouncedSearch}%`);
+      if (activeTag) baseQuery = baseQuery.contains("tags", [activeTag]);
+      const { data } = await baseQuery;
+      if (!data) return { all: 0, open: 0, solved: 0, unanswered: 0 };
+      const all = data.length;
+      const solved = data.filter(q => q.status === "resolved").length;
+      const open = data.filter(q => q.status === "open").length;
+      const unanswered = data.filter(q => q.status === "open" && (!q.answers || q.answers.length === 0)).length;
+      return { all, open, solved, unanswered };
     },
   });
 
@@ -143,6 +166,7 @@ export default function Browse() {
                   <SelectContent>
                     <SelectItem value="newest">Newest First</SelectItem>
                     <SelectItem value="oldest">Oldest First</SelectItem>
+                    <SelectItem value="popular">Most Popular</SelectItem>
                     <SelectItem value="unanswered">Unanswered</SelectItem>
                   </SelectContent>
                 </Select>
@@ -186,16 +210,16 @@ export default function Browse() {
         <Tabs value={statusTab} onValueChange={(v) => { setStatusTab(v); setPage(0); }} className="mb-6">
           <TabsList className="bg-muted/50 border border-border">
             <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-1.5">
-              <Sparkles className="h-3.5 w-3.5" /> All
+              <Sparkles className="h-3.5 w-3.5" /> All {tabCounts ? <span className="ml-1 text-[10px] opacity-70">({tabCounts.all})</span> : null}
             </TabsTrigger>
             <TabsTrigger value="open" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-1.5">
-              <CircleDot className="h-3.5 w-3.5" /> Open
+              <CircleDot className="h-3.5 w-3.5" /> Open {tabCounts ? <span className="ml-1 text-[10px] opacity-70">({tabCounts.open})</span> : null}
             </TabsTrigger>
             <TabsTrigger value="solved" className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground gap-1.5">
-              <CheckCircle className="h-3.5 w-3.5" /> Solved
+              <CheckCircle className="h-3.5 w-3.5" /> Solved {tabCounts ? <span className="ml-1 text-[10px] opacity-70">({tabCounts.solved})</span> : null}
             </TabsTrigger>
             <TabsTrigger value="unanswered" className="data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground gap-1.5">
-              <AlertCircle className="h-3.5 w-3.5" /> Unanswered
+              <AlertCircle className="h-3.5 w-3.5" /> Unanswered {tabCounts ? <span className="ml-1 text-[10px] opacity-70">({tabCounts.unanswered})</span> : null}
             </TabsTrigger>
           </TabsList>
         </Tabs>
