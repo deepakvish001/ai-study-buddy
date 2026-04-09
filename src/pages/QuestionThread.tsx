@@ -136,7 +136,7 @@ export default function QuestionThread() {
 
   const isOwner = user?.id === question.user_id;
   const isTeacher = hasRole("teacher") || hasRole("admin");
-  const questionAttachments: Attachment[] = Array.isArray(question.attachments) ? question.attachments as Attachment[] : [];
+  const questionAttachments: Attachment[] = Array.isArray(question.attachments) ? (question.attachments as unknown as Attachment[]) : [];
 
   return (
     <div className="min-h-screen bg-background">
