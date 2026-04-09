@@ -29,12 +29,19 @@ export default function Index() {
   const { data: recentQuestions } = useQuery({
     queryKey: ["recent-questions"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data: questions } = await supabase
         .from("questions")
-        .select("id, title, tags, status, created_at, profiles!inner(display_name)")
+        .select("id, title, tags, status, created_at, user_id")
         .order("created_at", { ascending: false })
         .limit(5);
-      return data ?? [];
+      if (!questions?.length) return [];
+      const userIds = [...new Set(questions.map((q) => q.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, display_name")
+        .in("user_id", userIds);
+      const profileMap = Object.fromEntries((profiles ?? []).map((p) => [p.user_id, p.display_name]));
+      return questions.map((q) => ({ ...q, display_name: profileMap[q.user_id] ?? "Anonymous" }));
     },
   });
 
@@ -152,7 +159,7 @@ export default function Index() {
                         {q.tags?.map((t: string) => (
                           <Badge key={t} variant="outline" className="text-xs border-border text-muted-foreground">{t}</Badge>
                         ))}
-                        <span className="text-xs text-muted-foreground">by {q.profiles?.display_name}</span>
+                        <span className="text-xs text-muted-foreground">by {q.display_name}</span>
                       </div>
                     </div>
                     {q.status === "resolved" && (
