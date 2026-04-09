@@ -237,13 +237,14 @@ export default function QuestionThread() {
           {answers?.map((answer) => {
             const currentVote = userVotes?.[answer.id];
             const isPendingAI = answer.is_ai && answer.status === "pending";
+            const isVerifiedAI = answer.is_ai && answer.status === "approved";
             return (
-              <Card key={answer.id} className={`border-border ${isPendingAI ? "opacity-80 border-dashed border-primary/40" : ""} ${answer.is_accepted ? "border-secondary/50 glow-green" : ""} ${answer.is_ai && !isPendingAI ? "border-primary/30 glow-orange" : ""}`}>
+              <Card key={answer.id} className={`border-border ${answer.is_accepted ? "border-secondary/50 glow-green" : ""} ${answer.is_ai ? "border-primary/30 glow-orange" : ""}`}>
                 {isPendingAI && (
                   <div className="px-4 pt-3 sm:px-6 sm:pt-4">
                     <div className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 text-xs text-primary">
                       <Clock className="h-3.5 w-3.5 shrink-0" />
-                      <span>Awaiting teacher review — only visible to you{isTeacher ? " (teacher/admin)" : " (question owner)"}.</span>
+                      <span>This AI answer is awaiting teacher verification.</span>
                     </div>
                   </div>
                 )}
@@ -263,7 +264,8 @@ export default function QuestionThread() {
                       <div className="flex items-center gap-2 mb-3 flex-wrap">
                         {answer.is_ai && <Badge className="bg-primary/10 text-primary border-primary/20"><Zap className="mr-1 h-3 w-3" /> AI Answer</Badge>}
                         {answer.is_accepted && <Badge className="bg-secondary/10 text-secondary border-0"><CheckCircle className="mr-1 h-3 w-3" /> Accepted</Badge>}
-                        {answer.status === "pending" && <Badge variant="outline" className="border-primary/30 text-primary text-xs">Pending Review</Badge>}
+                        {isPendingAI && <Badge variant="outline" className="border-yellow-500/30 text-yellow-500 text-xs"><Clock className="mr-1 h-3 w-3" /> Verification Pending</Badge>}
+                        {isVerifiedAI && <Badge className="bg-secondary/10 text-secondary border-secondary/20 text-xs"><Shield className="mr-1 h-3 w-3" /> Verified by Teacher</Badge>}
                         {answer.confidence && answer.is_ai && (
                           <Badge variant="outline" className={`text-xs ${answer.confidence === "high" ? "border-secondary/30 text-secondary" : answer.confidence === "medium" ? "border-primary/30 text-primary" : "border-destructive/30 text-destructive"}`}>{answer.confidence} confidence</Badge>
                         )}
