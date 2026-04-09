@@ -348,7 +348,7 @@ export default function TeacherReview() {
           )}
 
           <div className="space-y-4">
-            {filtered.map((answer: any) => renderAnswerCard(answer, activeTab === "pending"))}
+            {filtered.map((answer: any) => renderAnswerCard(answer, activeTab === "pending" || activeTab === "rejected"))}
           </div>
         </Tabs>
       </div>
