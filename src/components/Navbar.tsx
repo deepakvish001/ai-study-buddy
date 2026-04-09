@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Zap, LogOut, BookOpen, Shield, Menu } from "lucide-react";
+import { Zap, LogOut, BookOpen, Shield, Menu, Settings } from "lucide-react";
 
 export default function Navbar() {
   const { user, profile, hasRole, signOut } = useAuth();
@@ -14,6 +14,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   const isTeacher = hasRole("teacher") || hasRole("admin");
+  const isAdmin = hasRole("admin");
 
   const { data: pendingCount } = useQuery({
     queryKey: ["pending-count"],
@@ -63,6 +64,13 @@ export default function Navbar() {
                     {pendingCount}
                   </span>
                 )}
+              </Button>
+            </Link>
+          )}
+          {isAdmin && (
+            <Link to="/admin" onClick={close}>
+              <Button variant="ghost" size="sm" className={`w-full justify-start ${isActive("/admin") ? activeClass : inactiveClass}`}>
+                <Settings className="mr-2 h-4 w-4" /> Admin
               </Button>
             </Link>
           )}
@@ -117,6 +125,13 @@ export default function Navbar() {
                         {pendingCount}
                       </span>
                     )}
+                  </Button>
+                </Link>
+              )}
+              {isAdmin && (
+                <Link to="/admin">
+                  <Button variant="ghost" size="sm" className={isActive("/admin") ? activeClass : inactiveClass}>
+                    <Settings className="mr-1 h-4 w-4" /> Admin
                   </Button>
                 </Link>
               )}

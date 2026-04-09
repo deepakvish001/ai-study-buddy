@@ -17,21 +17,24 @@ import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
 export default function Profile() {
-  const { user, profile, roles } = useAuth();
+  const { user, profile, roles, hasRole } = useAuth();
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const { data: reputation } = useQuery({
-    queryKey: ["reputation", user?.id],
+  const { data: profileData } = useQuery({
+    queryKey: ["profile-data", user?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("reputation").eq("user_id", user!.id).single();
-      return data?.reputation ?? 0;
+      const { data } = await supabase.from("profiles").select("reputation, reviews_completed").eq("user_id", user!.id).single();
+      return data;
     },
     enabled: !!user,
   });
+
+  const reputation = profileData?.reputation ?? 0;
+  const reviewsCompleted = profileData?.reviews_completed ?? 0;
 
   const { data: stats } = useQuery({
     queryKey: ["profile-stats", user?.id],
@@ -71,7 +74,7 @@ export default function Profile() {
     else {
       toast.success("Profile updated!");
       setEditOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["reputation", user.id] });
+      queryClient.invalidateQueries({ queryKey: ["profile-data", user.id] });
       // Force auth context refresh
       window.location.reload();
     }
@@ -155,7 +158,7 @@ export default function Profile() {
         </Card>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card className="bg-card border-border">
             <CardContent className="py-4 text-center">
               <div className="text-2xl font-bold text-foreground">{stats?.questions ?? 0}</div>
@@ -174,7 +177,25 @@ export default function Profile() {
               <div className="text-xs text-muted-foreground">Reputation</div>
             </CardContent>
           </Card>
+          {(hasRole("teacher") || hasRole("admin")) && (
+            <Card className="bg-card border-border">
+              <CardContent className="py-4 text-center">
+                <div className="text-2xl font-bold text-secondary">{reviewsCompleted ?? 0}</div>
+                <div className="text-xs text-muted-foreground">Reviews</div>
+              </CardContent>
+            </Card>
+          )}
         </div>
+
+        {hasRole("admin") && (
+          <div className="mb-8">
+            <Link to="/admin">
+              <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/10">
+                <Shield className="mr-2 h-4 w-4" /> Go to Admin Dashboard
+              </Button>
+            </Link>
+          </div>
+        )}
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="bg-card border-border">
