@@ -24,6 +24,8 @@ export type Database = {
           is_accepted: boolean
           is_ai: boolean
           question_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
           sources_json: Json | null
           status: Database["public"]["Enums"]["answer_status"]
           updated_at: string
@@ -39,6 +41,8 @@ export type Database = {
           is_accepted?: boolean
           is_ai?: boolean
           question_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           sources_json?: Json | null
           status?: Database["public"]["Enums"]["answer_status"]
           updated_at?: string
@@ -54,6 +58,8 @@ export type Database = {
           is_accepted?: boolean
           is_ai?: boolean
           question_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           sources_json?: Json | null
           status?: Database["public"]["Enums"]["answer_status"]
           updated_at?: string
