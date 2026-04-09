@@ -130,8 +130,8 @@ export default function TeacherReview() {
                 <div className="flex items-center gap-2 mb-1">
                   <input type="checkbox" checked={selected.has(answer.id)} onChange={() => toggleSelect(answer.id)} className="accent-primary h-4 w-4" />
                   <Badge className="bg-primary/10 text-primary border-primary/20"><Zap className="mr-1 h-3 w-3" /> AI Answer</Badge>
-                  {answer.confidence && (
-                    <Badge variant="outline" className={`text-xs ${answer.confidence === "low" ? "border-destructive/30 text-destructive" : "border-primary/30 text-primary"}`}>{answer.confidence} confidence</Badge>
+                   {answer.confidence && (
+                    <Badge variant="outline" className={`text-xs ${answer.confidence === "low" ? "border-destructive/30 text-destructive" : answer.confidence === "high" ? "border-secondary/30 text-secondary" : "border-primary/30 text-primary"}`}>{answer.confidence} confidence</Badge>
                   )}
                 </div>
                 <CardTitle className="text-sm">
