@@ -15,6 +15,7 @@ import Browse from "./pages/Browse";
 import TeacherReview from "./pages/TeacherReview";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
+import Leaderboard from "./pages/Leaderboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/review" element={<ProtectedRoute requiredRole="teacher"><TeacherReview /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><Admin /></ProtectedRoute>} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
