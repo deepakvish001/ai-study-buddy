@@ -1,11 +1,64 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
-import { Zap, LogOut, User, BookOpen, Shield } from "lucide-react";
+import { Zap, LogOut, User, BookOpen, Shield, Menu } from "lucide-react";
 
 export default function Navbar() {
   const { user, profile, hasRole, signOut } = useAuth();
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+
+  const close = () => setOpen(false);
+
+  const navLinks = (
+    <>
+      <Link to="/browse" onClick={close}>
+        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-foreground">
+          <BookOpen className="mr-2 h-4 w-4" /> Browse
+        </Button>
+      </Link>
+
+      {user && (
+        <>
+          <Link to="/ask" onClick={close}>
+            <Button size="sm" className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+              Ask a Doubt
+            </Button>
+          </Link>
+          {(hasRole("teacher") || hasRole("admin")) && (
+            <Link to="/review" onClick={close}>
+              <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-foreground">
+                <Shield className="mr-2 h-4 w-4" /> Review
+              </Button>
+            </Link>
+          )}
+          <Link to="/profile" onClick={close}>
+            <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-foreground">
+              <User className="mr-2 h-4 w-4" /> Profile
+            </Button>
+          </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start text-muted-foreground hover:text-foreground"
+            onClick={() => { close(); signOut().then(() => navigate("/")); }}
+          >
+            <LogOut className="mr-2 h-4 w-4" /> Sign Out
+          </Button>
+        </>
+      )}
+
+      {!user && (
+        <Link to="/auth" onClick={close}>
+          <Button size="sm" className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+            Sign In
+          </Button>
+        </Link>
+      )}
+    </>
+  );
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
@@ -17,13 +70,13 @@ export default function Navbar() {
           <span className="text-xl font-bold text-foreground">DoubtSolver</span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        {/* Desktop nav */}
+        <div className="hidden md:flex items-center gap-2">
           <Link to="/browse">
             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               <BookOpen className="mr-1 h-4 w-4" /> Browse
             </Button>
           </Link>
-
           {user && (
             <>
               <Link to="/ask">
@@ -48,7 +101,6 @@ export default function Navbar() {
               </Button>
             </>
           )}
-
           {!user && (
             <Link to="/auth">
               <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
@@ -56,6 +108,22 @@ export default function Navbar() {
               </Button>
             </Link>
           )}
+        </div>
+
+        {/* Mobile hamburger */}
+        <div className="md:hidden">
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-muted-foreground">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-64 bg-background border-border">
+              <div className="flex flex-col gap-2 mt-8">
+                {navLinks}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </nav>
