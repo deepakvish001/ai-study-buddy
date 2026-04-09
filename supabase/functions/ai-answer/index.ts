@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { questionId, title, body } = await req.json();
+    const { questionId, title, body, regenerate } = await req.json();
     if (!questionId || !title || !body) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
@@ -37,10 +37,15 @@ serve(async (req) => {
       throw existingAnswerError;
     }
 
-    if (existingAnswer) {
+    if (existingAnswer && !regenerate) {
       return new Response(JSON.stringify({ success: true, confidence: existingAnswer.confidence, status: existingAnswer.status, existing: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // If regenerating, delete the old AI answer first
+    if (existingAnswer && regenerate) {
+      await supabase.from("answers").delete().eq("id", existingAnswer.id);
     }
 
     const systemPrompt = `You are an expert academic tutor on the DoubtSolver platform. Your job is to answer students' doubts clearly and accurately.
