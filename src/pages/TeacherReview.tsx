@@ -22,6 +22,7 @@ export default function TeacherReview() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBody, setEditBody] = useState("");
   const [filter, setFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("newest");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   if (!hasRole("teacher") && !hasRole("admin")) {
