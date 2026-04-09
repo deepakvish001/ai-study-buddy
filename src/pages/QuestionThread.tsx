@@ -42,7 +42,7 @@ export default function QuestionThread() {
   const { data: answers } = useQuery({
     queryKey: ["answers", id],
     queryFn: async () => {
-      const { data } = await supabase.from("answers").select("*").eq("question_id", id!).order("is_ai", { ascending: false }).order("is_accepted", { ascending: false }).order("upvotes", { ascending: false });
+      const { data } = await supabase.from("answers").select("*").eq("question_id", id!).order("is_ai", { ascending: false }).order("created_at", { ascending: true });
       if (!data?.length) return [];
       const userIds = [...new Set(data.filter(a => a.user_id).map(a => a.user_id!))];
       const { data: profiles } = userIds.length ? await supabase.from("profiles").select("user_id, display_name").in("user_id", userIds) : { data: [] };
