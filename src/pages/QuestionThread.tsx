@@ -244,8 +244,13 @@ export default function QuestionThread() {
             </Card>
           )}
 
-          {answers?.map((answer) => {
+          {answers?.filter(a => {
+            // Hide pending AI answers from regular users (not owner, not teacher/admin)
+            if (a.is_ai && a.status === "pending" && !isOwner && !isTeacher) return false;
+            return true;
+          }).map((answer) => {
             const currentVote = userVotes?.[answer.id];
+            const isPendingAI = answer.is_ai && answer.status === "pending";
             return (
               <Card key={answer.id} className={`border-border ${answer.is_accepted ? "border-secondary/50 glow-green" : ""} ${answer.is_ai ? "border-primary/30 glow-orange" : ""}`}>
                 <CardContent className="p-4 sm:p-6">
