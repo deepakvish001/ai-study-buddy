@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { Zap, Eye, EyeOff, Loader2 } from "lucide-react";
 import { lovable } from "@/integrations/lovable/index";
+import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 
 function getPasswordStrength(pw: string): { label: string; value: number; color: string } {
@@ -141,15 +142,41 @@ export default function Auth() {
                 )}
               </div>
               <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={loading}>
-                {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading...</> : isSignUp ? "Create Account" : "Sign In"}
+              {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading...</> : isSignUp ? "Create Account" : "Sign In"}
               </Button>
             </form>
+
+            {!isSignUp && (
+              <div className="mt-3 text-center">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!email) { toast.error("Enter your email first."); return; }
+                    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                      redirectTo: `${window.location.origin}/reset-password`,
+                    });
+                    if (error) toast.error(error.message);
+                    else toast.success("Password reset link sent! Check your email.");
+                  }}
+                  className="text-xs text-muted-foreground hover:text-primary"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
+
             <div className="mt-4 text-center text-sm text-muted-foreground">
               {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
               <button onClick={() => setIsSignUp(!isSignUp)} className="text-primary hover:underline">
                 {isSignUp ? "Sign In" : "Sign Up"}
               </button>
             </div>
+
+            {isSignUp && (
+              <p className="mt-3 text-xs text-center text-muted-foreground">
+                Want to become a teacher? Contact an admin after signing up.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

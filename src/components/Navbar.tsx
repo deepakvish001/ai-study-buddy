@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Zap, LogOut, BookOpen, Shield, Menu } from "lucide-react";
+import { Zap, LogOut, BookOpen, Shield, Menu, Settings } from "lucide-react";
 
 export default function Navbar() {
   const { user, profile, hasRole, signOut } = useAuth();
@@ -14,6 +14,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   const isTeacher = hasRole("teacher") || hasRole("admin");
+  const isAdmin = hasRole("admin");
 
   const { data: pendingCount } = useQuery({
     queryKey: ["pending-count"],

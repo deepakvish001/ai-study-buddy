@@ -5,13 +5,16 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
 import ScrollToTop from "@/components/ScrollToTop";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import AskQuestion from "./pages/AskQuestion";
 import QuestionThread from "./pages/QuestionThread";
 import Browse from "./pages/Browse";
 import TeacherReview from "./pages/TeacherReview";
 import Profile from "./pages/Profile";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,11 +30,13 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/ask" element={<AskQuestion />} />
-            <Route path="/question/:id" element={<QuestionThread />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/browse" element={<Browse />} />
-            <Route path="/review" element={<TeacherReview />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route path="/ask" element={<ProtectedRoute><AskQuestion /></ProtectedRoute>} />
+            <Route path="/question/:id" element={<QuestionThread />} />
+            <Route path="/review" element={<ProtectedRoute requiredRole="teacher"><TeacherReview /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><Admin /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
