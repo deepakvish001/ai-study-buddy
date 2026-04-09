@@ -14,16 +14,229 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      answers: {
+        Row: {
+          body: string
+          confidence: Database["public"]["Enums"]["answer_confidence"] | null
+          created_at: string
+          downvotes: number
+          id: string
+          is_accepted: boolean
+          is_ai: boolean
+          question_id: string
+          sources_json: Json | null
+          status: Database["public"]["Enums"]["answer_status"]
+          updated_at: string
+          upvotes: number
+          user_id: string | null
+        }
+        Insert: {
+          body: string
+          confidence?: Database["public"]["Enums"]["answer_confidence"] | null
+          created_at?: string
+          downvotes?: number
+          id?: string
+          is_accepted?: boolean
+          is_ai?: boolean
+          question_id: string
+          sources_json?: Json | null
+          status?: Database["public"]["Enums"]["answer_status"]
+          updated_at?: string
+          upvotes?: number
+          user_id?: string | null
+        }
+        Update: {
+          body?: string
+          confidence?: Database["public"]["Enums"]["answer_confidence"] | null
+          created_at?: string
+          downvotes?: number
+          id?: string
+          is_accepted?: boolean
+          is_ai?: boolean
+          question_id?: string
+          sources_json?: Json | null
+          status?: Database["public"]["Enums"]["answer_status"]
+          updated_at?: string
+          upvotes?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comments: {
+        Row: {
+          answer_id: string
+          body: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answer_id: string
+          body: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answer_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_answer_id_fkey"
+            columns: ["answer_id"]
+            isOneToOne: false
+            referencedRelation: "answers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      questions: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          status: Database["public"]["Enums"]["question_status"]
+          tags: string[] | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          status?: Database["public"]["Enums"]["question_status"]
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          status?: Database["public"]["Enums"]["question_status"]
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      votes: {
+        Row: {
+          answer_id: string
+          created_at: string
+          id: string
+          user_id: string
+          vote_type: Database["public"]["Enums"]["vote_type"]
+        }
+        Insert: {
+          answer_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+          vote_type: Database["public"]["Enums"]["vote_type"]
+        }
+        Update: {
+          answer_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+          vote_type?: Database["public"]["Enums"]["vote_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "votes_answer_id_fkey"
+            columns: ["answer_id"]
+            isOneToOne: false
+            referencedRelation: "answers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      answer_confidence: "high" | "medium" | "low"
+      answer_status: "approved" | "pending" | "rejected"
+      app_role: "student" | "teacher" | "admin"
+      question_status: "open" | "closed" | "resolved"
+      vote_type: "up" | "down"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +363,12 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      answer_confidence: ["high", "medium", "low"],
+      answer_status: ["approved", "pending", "rejected"],
+      app_role: ["student", "teacher", "admin"],
+      question_status: ["open", "closed", "resolved"],
+      vote_type: ["up", "down"],
+    },
   },
 } as const
