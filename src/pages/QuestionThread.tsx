@@ -15,9 +15,6 @@ import { Zap, ThumbsUp, ThumbsDown, CheckCircle, Shield, Loader2, MessageSquare,
 import { formatDistanceToNow } from "date-fns";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import CommentThread from "@/components/CommentThread";
-import { formatDistanceToNow } from "date-fns";
-import MarkdownRenderer from "@/components/MarkdownRenderer";
-import CommentThread from "@/components/CommentThread";
 
 interface Attachment { name: string; url: string; type: string; }
 
