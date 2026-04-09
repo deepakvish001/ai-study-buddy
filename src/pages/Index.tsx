@@ -2,20 +2,51 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Clock, Users, CheckCircle, Search, ArrowRight } from "lucide-react";
-import { useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Zap, Clock, Users, CheckCircle, Search, ArrowRight, MessageSquare, Brain, Shield } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDistanceToNow } from "date-fns";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 const POPULAR_TAGS = ["Mathematics", "Physics", "Chemistry", "Biology", "Computer Science", "English", "History", "Economics"];
+
+function AnimatedCounter({ target, suffix }: { target: number | string; suffix?: string }) {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const animated = useRef(false);
+
+  useEffect(() => {
+    if (typeof target !== "number" || animated.current) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !animated.current) {
+        animated.current = true;
+        const duration = 1200;
+        const start = performance.now();
+        const step = (now: number) => {
+          const progress = Math.min((now - start) / duration, 1);
+          setCount(Math.floor(progress * target));
+          if (progress < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      }
+    });
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [target]);
+
+  if (typeof target === "string") return <div ref={ref}>{target}</div>;
+  return <div ref={ref}>{count}{suffix}</div>;
+}
 
 export default function Index() {
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
 
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["stats"],
     queryFn: async () => {
       const [q, a] = await Promise.all([
@@ -26,20 +57,17 @@ export default function Index() {
     },
   });
 
-  const { data: recentQuestions } = useQuery({
+  const { data: recentQuestions, isLoading: recentLoading } = useQuery({
     queryKey: ["recent-questions"],
     queryFn: async () => {
       const { data: questions } = await supabase
         .from("questions")
-        .select("id, title, tags, status, created_at, user_id")
+        .select("id, title, tags, status, created_at, user_id, answers(id)")
         .order("created_at", { ascending: false })
         .limit(5);
       if (!questions?.length) return [];
       const userIds = [...new Set(questions.map((q) => q.user_id))];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, display_name")
-        .in("user_id", userIds);
+      const { data: profiles } = await supabase.from("profiles").select("user_id, display_name").in("user_id", userIds);
       const profileMap = Object.fromEntries((profiles ?? []).map((p) => [p.user_id, p.display_name]));
       return questions.map((q) => ({ ...q, display_name: profileMap[q.user_id] ?? "Anonymous" }));
     },
@@ -51,7 +79,7 @@ export default function Index() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
       {/* Hero */}
@@ -65,29 +93,19 @@ export default function Index() {
             What's your <span className="text-primary">doubt</span>?
           </h1>
           <p className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground">
-            Ask any academic question and get instant, AI-generated answers with sources.
-            Verified by real teachers.
+            Ask any academic question and get instant, AI-generated answers with sources. Verified by real teachers.
           </p>
 
           <form onSubmit={handleSearch} className="mx-auto flex max-w-xl gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search doubts or ask a new one..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-12 pl-10 bg-card border-border text-foreground placeholder:text-muted-foreground"
-              />
+              <Input placeholder="Search doubts or ask a new one..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-12 pl-10 bg-card border-border text-foreground placeholder:text-muted-foreground" />
             </div>
-            <Button type="submit" size="lg" className="h-12 bg-primary text-primary-foreground hover:bg-primary/90">
-              Search
-            </Button>
+            <Button type="submit" size="lg" className="h-12 bg-primary text-primary-foreground hover:bg-primary/90">Search</Button>
           </form>
 
           <div className="mt-6 flex items-center justify-center gap-4 text-sm text-muted-foreground">
-            <Link to="/ask" className="flex items-center gap-1 text-primary hover:underline">
-              Or ask a new question <ArrowRight className="h-3 w-3" />
-            </Link>
+            <Link to="/ask" className="flex items-center gap-1 text-primary hover:underline">Or ask a new question <ArrowRight className="h-3 w-3" /></Link>
           </div>
         </div>
       </section>
@@ -95,23 +113,47 @@ export default function Index() {
       {/* Stats */}
       <section className="border-y border-border/50 bg-card/30 py-8">
         <div className="container mx-auto grid grid-cols-3 gap-4 sm:gap-8 px-4 text-center">
-          <div>
-            <div className="text-2xl sm:text-3xl font-bold text-foreground">{stats?.questions ?? 0}</div>
-            <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-              <Users className="h-3 w-3" /> Questions Asked
-            </div>
-          </div>
-          <div>
-            <div className="text-2xl sm:text-3xl font-bold text-primary">{stats?.aiAnswers ?? 0}</div>
-            <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-              <Zap className="h-3 w-3" /> AI Answers
-            </div>
-          </div>
-          <div>
-            <div className="text-2xl sm:text-3xl font-bold text-secondary">{"< 10s"}</div>
-            <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-              <Clock className="h-3 w-3" /> Avg Response
-            </div>
+          {statsLoading ? (
+            <>
+              {[1,2,3].map(i => <div key={i}><Skeleton className="h-9 w-16 mx-auto mb-1" /><Skeleton className="h-4 w-24 mx-auto" /></div>)}
+            </>
+          ) : (
+            <>
+              <div>
+                <div className="text-2xl sm:text-3xl font-bold text-foreground"><AnimatedCounter target={stats?.questions ?? 0} /></div>
+                <div className="text-sm text-muted-foreground flex items-center justify-center gap-1"><Users className="h-3 w-3" /> Questions Asked</div>
+              </div>
+              <div>
+                <div className="text-2xl sm:text-3xl font-bold text-primary"><AnimatedCounter target={stats?.aiAnswers ?? 0} /></div>
+                <div className="text-sm text-muted-foreground flex items-center justify-center gap-1"><Zap className="h-3 w-3" /> AI Answers</div>
+              </div>
+              <div>
+                <div className="text-2xl sm:text-3xl font-bold text-secondary">{"< 10s"}</div>
+                <div className="text-sm text-muted-foreground flex items-center justify-center gap-1"><Clock className="h-3 w-3" /> Avg Response</div>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* How it Works */}
+      <section className="py-16 border-b border-border/50">
+        <div className="container mx-auto px-4">
+          <h2 className="mb-10 text-2xl font-bold text-foreground text-center">How it Works</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto">
+            {[
+              { icon: MessageSquare, title: "1. Ask", desc: "Post your academic doubt with relevant details" },
+              { icon: Brain, title: "2. AI Answers", desc: "Get an instant AI-generated answer with sources" },
+              { icon: Shield, title: "3. Teacher Verifies", desc: "Real teachers review and approve for accuracy" },
+            ].map((step) => (
+              <div key={step.title} className="text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20">
+                  <step.icon className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="font-semibold text-foreground mb-1">{step.title}</h3>
+                <p className="text-sm text-muted-foreground">{step.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -123,9 +165,7 @@ export default function Index() {
           <div className="flex flex-wrap gap-3">
             {POPULAR_TAGS.map((tag) => (
               <Link key={tag} to={`/browse?tag=${encodeURIComponent(tag)}`}>
-                <Badge variant="outline" className="cursor-pointer px-4 py-2 text-sm border-border text-muted-foreground hover:border-primary hover:text-primary transition-colors">
-                  {tag}
-                </Badge>
+                <Badge variant="outline" className="cursor-pointer px-4 py-2 text-sm border-border text-muted-foreground hover:border-primary hover:text-primary transition-colors">{tag}</Badge>
               </Link>
             ))}
           </div>
@@ -137,34 +177,36 @@ export default function Index() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold text-foreground">Recent Questions</h2>
-            <Link to="/browse">
-              <Button variant="ghost" className="text-primary hover:text-primary/80">
-                View All <ArrowRight className="ml-1 h-4 w-4" />
-              </Button>
-            </Link>
+            <Link to="/browse"><Button variant="ghost" className="text-primary hover:text-primary/80">View All <ArrowRight className="ml-1 h-4 w-4" /></Button></Link>
           </div>
           <div className="space-y-3">
-            {recentQuestions?.length === 0 && (
-              <div className="glass-card p-8 text-center text-muted-foreground">
-                No questions yet. Be the first to ask!
+            {recentLoading && [1,2,3].map(i => (
+              <div key={i} className="glass-card p-4">
+                <Skeleton className="h-5 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-1/2" />
               </div>
+            ))}
+            {!recentLoading && recentQuestions?.length === 0 && (
+              <div className="glass-card p-8 text-center text-muted-foreground">No questions yet. Be the first to ask!</div>
             )}
-            {recentQuestions?.map((q: any) => (
+            {!recentLoading && recentQuestions?.map((q: any) => (
               <Link key={q.id} to={`/question/${q.id}`} className="block">
                 <div className="glass-card p-4 hover:border-primary/30 transition-colors">
                   <div className="flex items-start justify-between">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-foreground hover:text-primary transition-colors">{q.title}</h3>
-                      <div className="mt-2 flex items-center gap-2">
+                      <div className="mt-2 flex items-center gap-2 flex-wrap">
                         {q.tags?.map((t: string) => (
                           <Badge key={t} variant="outline" className="text-xs border-border text-muted-foreground">{t}</Badge>
                         ))}
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MessageSquare className="h-3 w-3" /> {q.answers?.length ?? 0}
+                        </span>
                         <span className="text-xs text-muted-foreground">by {q.display_name}</span>
+                        <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(q.created_at), { addSuffix: true })}</span>
                       </div>
                     </div>
-                    {q.status === "resolved" && (
-                      <CheckCircle className="h-5 w-5 text-secondary shrink-0" />
-                    )}
+                    {q.status === "resolved" && <CheckCircle className="h-5 w-5 text-secondary shrink-0" />}
                   </div>
                 </div>
               </Link>
@@ -172,6 +214,8 @@ export default function Index() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 }

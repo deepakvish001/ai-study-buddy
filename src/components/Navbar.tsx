@@ -1,21 +1,48 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
-import { Zap, LogOut, User, BookOpen, Shield, Menu } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Zap, LogOut, BookOpen, Shield, Menu } from "lucide-react";
 
 export default function Navbar() {
   const { user, profile, hasRole, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
 
+  const isTeacher = hasRole("teacher") || hasRole("admin");
+
+  const { data: pendingCount } = useQuery({
+    queryKey: ["pending-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("answers")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending")
+        .eq("is_ai", true);
+      return count ?? 0;
+    },
+    enabled: isTeacher,
+    refetchInterval: 30000,
+  });
+
   const close = () => setOpen(false);
+  const isActive = (path: string) => location.pathname === path;
+
+  const initials = profile?.display_name
+    ? profile.display_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+    : "U";
+
+  const activeClass = "text-primary";
+  const inactiveClass = "text-muted-foreground hover:text-foreground";
 
   const navLinks = (
     <>
       <Link to="/browse" onClick={close}>
-        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-foreground">
+        <Button variant="ghost" size="sm" className={`w-full justify-start ${isActive("/browse") ? activeClass : inactiveClass}`}>
           <BookOpen className="mr-2 h-4 w-4" /> Browse
         </Button>
       </Link>
@@ -27,24 +54,25 @@ export default function Navbar() {
               Ask a Doubt
             </Button>
           </Link>
-          {(hasRole("teacher") || hasRole("admin")) && (
+          {isTeacher && (
             <Link to="/review" onClick={close}>
-              <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" size="sm" className={`w-full justify-start ${isActive("/review") ? activeClass : inactiveClass}`}>
                 <Shield className="mr-2 h-4 w-4" /> Review
+                {(pendingCount ?? 0) > 0 && (
+                  <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-1">
+                    {pendingCount}
+                  </span>
+                )}
               </Button>
             </Link>
           )}
           <Link to="/profile" onClick={close}>
-            <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-foreground">
-              <User className="mr-2 h-4 w-4" /> Profile
+            <Button variant="ghost" size="sm" className={`w-full justify-start ${isActive("/profile") ? activeClass : inactiveClass}`}>
+              <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">{initials}</div>
+              Profile
             </Button>
           </Link>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start text-muted-foreground hover:text-foreground"
-            onClick={() => { close(); signOut().then(() => navigate("/")); }}
-          >
+          <Button variant="ghost" size="sm" className={`w-full justify-start ${inactiveClass}`} onClick={() => { close(); signOut().then(() => navigate("/")); }}>
             <LogOut className="mr-2 h-4 w-4" /> Sign Out
           </Button>
         </>
@@ -52,9 +80,7 @@ export default function Navbar() {
 
       {!user && (
         <Link to="/auth" onClick={close}>
-          <Button size="sm" className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-            Sign In
-          </Button>
+          <Button size="sm" className="w-full bg-primary text-primary-foreground hover:bg-primary/90">Sign In</Button>
         </Link>
       )}
     </>
@@ -73,39 +99,40 @@ export default function Navbar() {
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-2">
           <Link to="/browse">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="sm" className={isActive("/browse") ? activeClass : inactiveClass}>
               <BookOpen className="mr-1 h-4 w-4" /> Browse
             </Button>
           </Link>
           {user && (
             <>
               <Link to="/ask">
-                <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                  Ask a Doubt
-                </Button>
+                <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">Ask a Doubt</Button>
               </Link>
-              {(hasRole("teacher") || hasRole("admin")) && (
+              {isTeacher && (
                 <Link to="/review">
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                  <Button variant="ghost" size="sm" className={`relative ${isActive("/review") ? activeClass : inactiveClass}`}>
                     <Shield className="mr-1 h-4 w-4" /> Review
+                    {(pendingCount ?? 0) > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-0.5">
+                        {pendingCount}
+                      </span>
+                    )}
                   </Button>
                 </Link>
               )}
               <Link to="/profile">
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                  <User className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className={isActive("/profile") ? activeClass : inactiveClass}>
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary">{initials}</div>
                 </Button>
               </Link>
-              <Button variant="ghost" size="icon" onClick={() => signOut().then(() => navigate("/"))} className="text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" size="icon" onClick={() => signOut().then(() => navigate("/"))} className={inactiveClass}>
                 <LogOut className="h-4 w-4" />
               </Button>
             </>
           )}
           {!user && (
             <Link to="/auth">
-              <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                Sign In
-              </Button>
+              <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">Sign In</Button>
             </Link>
           )}
         </div>
@@ -119,9 +146,7 @@ export default function Navbar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-64 bg-background border-border">
-              <div className="flex flex-col gap-2 mt-8">
-                {navLinks}
-              </div>
+              <div className="flex flex-col gap-2 mt-8">{navLinks}</div>
             </SheetContent>
           </Sheet>
         </div>
