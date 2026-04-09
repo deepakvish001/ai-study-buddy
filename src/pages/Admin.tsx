@@ -507,26 +507,51 @@ function UserManagementPanel({ queryClient, currentUserId }: { queryClient: any;
 function ContentManagementPanel() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "question" | "answer"; id: string; title: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: questions, isLoading } = useQuery({
     queryKey: ["admin-content", statusFilter],
     queryFn: async () => {
       let q = supabase.from("questions")
-        .select("id, title, body, status, tags, created_at, user_id, answers(id)")
+        .select("id, title, body, status, tags, created_at, user_id, answers(id, body, is_ai, status, created_at, user_id, upvotes, downvotes)")
         .order("created_at", { ascending: false })
         .limit(50);
       if (statusFilter !== "all") q = q.eq("status", statusFilter as "open" | "resolved" | "closed");
       const { data } = await q;
       if (!data?.length) return [];
-      const userIds = [...new Set(data.map(d => d.user_id))];
-      const { data: profiles } = await supabase.from("profiles").select("user_id, display_name").in("user_id", userIds);
+      const allUserIds = new Set<string>();
+      data.forEach(d => {
+        allUserIds.add(d.user_id);
+        (d.answers ?? []).forEach((a: any) => { if (a.user_id) allUserIds.add(a.user_id); });
+      });
+      const { data: profiles } = await supabase.from("profiles").select("user_id, display_name").in("user_id", [...allUserIds]);
       const nameMap: Record<string, string> = {};
       profiles?.forEach(p => { nameMap[p.user_id] = p.display_name ?? "User"; });
-      return data.map(d => ({ ...d, display_name: nameMap[d.user_id] ?? "User" }));
+      return data.map(d => ({ ...d, display_name: nameMap[d.user_id] ?? "User",
+        answers: (d.answers ?? []).map((a: any) => ({ ...a, display_name: a.user_id ? (nameMap[a.user_id] ?? "User") : "AI" }))
+      }));
     },
   });
 
   const filtered = questions?.filter(q => !search || q.title.toLowerCase().includes(search.toLowerCase())) ?? [];
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const table = deleteTarget.type === "question" ? "questions" : "answers";
+    const { error } = await supabase.from(table).delete().eq("id", deleteTarget.id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success(`${deleteTarget.type === "question" ? "Question" : "Answer"} deleted successfully.`);
+      queryClient.invalidateQueries({ queryKey: ["admin-content"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+    }
+    setDeleting(false);
+    setDeleteTarget(null);
+  };
 
   const statusIcon = (s: string) => {
     if (s === "resolved") return <CheckCircle className="h-3 w-3 text-secondary" />;
@@ -535,62 +560,140 @@ function ContentManagementPanel() {
   };
 
   return (
-    <Card className="bg-card border-border">
-      <CardHeader>
-        <CardTitle className="text-foreground flex items-center gap-2">
-          <FileText className="h-5 w-5 text-amber-400" /> Content Management
-        </CardTitle>
-        <div className="flex gap-3 mt-3 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search questions..." value={search} onChange={e => setSearch(e.target.value)}
-              className="pl-9 bg-muted border-border text-foreground" />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-36 bg-muted border-border text-foreground"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="open">Open</SelectItem>
-              <SelectItem value="resolved">Resolved</SelectItem>
-              <SelectItem value="closed">Closed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <p className="text-xs text-muted-foreground mt-2">{filtered.length} question{filtered.length !== 1 ? "s" : ""}</p>
-      </CardHeader>
-      <CardContent>
-        {isLoading && [1,2,3].map(i => <Skeleton key={i} className="h-14 w-full mb-3" />)}
-        <div className="space-y-2">
-          {filtered.map((q: any) => (
-            <div key={q.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50 hover:border-primary/20 transition-colors">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  {statusIcon(q.status)}
-                  <Link to={`/question/${q.id}`} className="font-medium text-foreground text-sm hover:text-primary transition-colors truncate">
-                    {q.title}
-                  </Link>
-                </div>
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
-                  <span>by {q.display_name}</span>
-                  <span>· {q.answers?.length ?? 0} answers</span>
-                  <span>· {formatDistanceToNow(new Date(q.created_at), { addSuffix: true })}</span>
-                  {q.tags?.slice(0, 2).map((t: string) => (
-                    <Badge key={t} variant="outline" className="text-[9px] border-border h-4 px-1">{t}</Badge>
-                  ))}
-                </div>
-              </div>
-              <Link to={`/question/${q.id}`}>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary">
-                  <Eye className="h-3.5 w-3.5" />
-                </Button>
-              </Link>
+    <>
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-foreground flex items-center gap-2">
+            <FileText className="h-5 w-5 text-amber-400" /> Content Management
+          </CardTitle>
+          <div className="flex gap-3 mt-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search questions..." value={search} onChange={e => setSearch(e.target.value)}
+                className="pl-9 bg-muted border-border text-foreground" />
             </div>
-          ))}
-        </div>
-        {!isLoading && filtered.length === 0 && (
-          <p className="text-center text-muted-foreground py-8">No questions found.</p>
-        )}
-      </CardContent>
-    </Card>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-36 bg-muted border-border text-foreground"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="open">Open</SelectItem>
+                <SelectItem value="resolved">Resolved</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">{filtered.length} question{filtered.length !== 1 ? "s" : ""}</p>
+        </CardHeader>
+        <CardContent>
+          {isLoading && [1,2,3].map(i => <Skeleton key={i} className="h-14 w-full mb-3" />)}
+          <div className="space-y-2">
+            {filtered.map((q: any) => (
+              <div key={q.id} className="rounded-lg bg-muted/30 border border-border/50 hover:border-primary/20 transition-colors overflow-hidden">
+                <div className="flex items-center gap-3 p-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      {statusIcon(q.status)}
+                      <button onClick={() => setExpandedId(expandedId === q.id ? null : q.id)}
+                        className="font-medium text-foreground text-sm hover:text-primary transition-colors truncate text-left">
+                        {q.title}
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
+                      <span>by {q.display_name}</span>
+                      <span>· {q.answers?.length ?? 0} answers</span>
+                      <span>· {formatDistanceToNow(new Date(q.created_at), { addSuffix: true })}</span>
+                      {q.tags?.slice(0, 2).map((t: string) => (
+                        <Badge key={t} variant="outline" className="text-[9px] border-border h-4 px-1">{t}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Link to={`/question/${q.id}`}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary">
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                    </Link>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      onClick={() => setDeleteTarget({ type: "question", id: q.id, title: q.title })}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Expanded: show body + answers */}
+                {expandedId === q.id && (
+                  <div className="border-t border-border/50 p-3 space-y-3">
+                    <div className="text-xs text-muted-foreground bg-muted/50 rounded p-3 max-h-32 overflow-y-auto">
+                      {q.body}
+                    </div>
+                    {q.answers?.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-foreground">Answers ({q.answers.length})</p>
+                        {q.answers.map((a: any) => (
+                          <div key={a.id} className="flex items-start gap-2 p-2 rounded bg-background border border-border/30">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-1">
+                                {a.is_ai ? (
+                                  <Badge className="bg-primary/10 text-primary border-0 text-[9px] h-4 px-1">AI</Badge>
+                                ) : (
+                                  <span>by {a.display_name}</span>
+                                )}
+                                <Badge className={`border-0 text-[9px] h-4 px-1 ${
+                                  a.status === "approved" ? "bg-secondary/10 text-secondary" :
+                                  a.status === "rejected" ? "bg-destructive/10 text-destructive" :
+                                  "bg-primary/10 text-primary"
+                                }`}>{a.status}</Badge>
+                                <span>↑{a.upvotes} ↓{a.downvotes}</span>
+                                <span>{formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}</span>
+                              </div>
+                              <p className="text-xs text-foreground line-clamp-2">{a.body}</p>
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0"
+                              onClick={() => setDeleteTarget({ type: "answer", id: a.id, title: a.body.slice(0, 50) + "..." })}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {!isLoading && filtered.length === 0 && (
+            <p className="text-center text-muted-foreground py-8">No questions found.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent className="bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" /> Delete {deleteTarget?.type === "question" ? "Question" : "Answer"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to permanently delete this {deleteTarget?.type}?
+              {deleteTarget?.type === "question" && " This will also delete all associated answers, comments, and votes."}
+            </p>
+            <div className="p-3 rounded bg-muted/50 border border-border/50">
+              <p className="text-sm text-foreground line-clamp-3">"{deleteTarget?.title}"</p>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" onClick={() => setDeleteTarget(null)} className="text-muted-foreground">Cancel</Button>
+              <Button onClick={handleDelete} disabled={deleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {deleting ? <Clock className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />}
+                Delete Permanently
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
