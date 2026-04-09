@@ -238,7 +238,7 @@ function TeacherApplicationsPanel({ queryClient }: { queryClient: any }) {
     queryKey: ["teacher-applications-all", statusFilter],
     queryFn: async () => {
       let q = supabase.from("teacher_applications").select("*").order("created_at", { ascending: false });
-      if (statusFilter !== "all") q = q.eq("status", statusFilter);
+      if (statusFilter !== "all") q = q.eq("status", statusFilter as "pending" | "approved" | "rejected");
       const { data } = await q;
       if (!data?.length) return [];
       const userIds = [...new Set(data.map(a => a.user_id))];
@@ -515,7 +515,7 @@ function ContentManagementPanel() {
         .select("id, title, body, status, tags, created_at, user_id, answers(id)")
         .order("created_at", { ascending: false })
         .limit(50);
-      if (statusFilter !== "all") q = q.eq("status", statusFilter);
+      if (statusFilter !== "all") q = q.eq("status", statusFilter as "open" | "resolved" | "closed");
       const { data } = await q;
       if (!data?.length) return [];
       const userIds = [...new Set(data.map(d => d.user_id))];
