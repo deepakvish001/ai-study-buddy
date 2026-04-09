@@ -17,21 +17,24 @@ import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
 export default function Profile() {
-  const { user, profile, roles } = useAuth();
+  const { user, profile, roles, hasRole } = useAuth();
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const { data: reputation } = useQuery({
-    queryKey: ["reputation", user?.id],
+  const { data: profileData } = useQuery({
+    queryKey: ["profile-data", user?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("reputation").eq("user_id", user!.id).single();
-      return data?.reputation ?? 0;
+      const { data } = await supabase.from("profiles").select("reputation, reviews_completed").eq("user_id", user!.id).single();
+      return data;
     },
     enabled: !!user,
   });
+
+  const reputation = profileData?.reputation ?? 0;
+  const reviewsCompleted = profileData?.reviews_completed ?? 0;
 
   const { data: stats } = useQuery({
     queryKey: ["profile-stats", user?.id],
