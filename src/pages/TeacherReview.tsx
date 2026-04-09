@@ -333,6 +333,31 @@ export default function TeacherReview() {
           )}
         </div>
 
+        {/* Summary Stats */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <Card className={`border-primary/20 cursor-pointer transition-all ${activeTab === "pending" ? "ring-2 ring-primary" : ""}`} onClick={() => { setActiveTab("pending"); setSelected(new Set()); setFilter("all"); }}>
+            <CardContent className="py-4 text-center">
+              <Clock className="mx-auto mb-1 h-5 w-5 text-primary" />
+              <p className="text-2xl font-bold text-primary">{globalPendingCount ?? 0}</p>
+              <p className="text-xs text-muted-foreground">Pending Review</p>
+            </CardContent>
+          </Card>
+          <Card className={`border-secondary/20 cursor-pointer transition-all ${activeTab === "approved" ? "ring-2 ring-secondary" : ""}`} onClick={() => { setActiveTab("approved"); setSelected(new Set()); setFilter("all"); }}>
+            <CardContent className="py-4 text-center">
+              <CheckCircle className="mx-auto mb-1 h-5 w-5 text-secondary" />
+              <p className="text-2xl font-bold text-secondary">{approvedCount ?? 0}</p>
+              <p className="text-xs text-muted-foreground">Approved</p>
+            </CardContent>
+          </Card>
+          <Card className={`border-destructive/20 cursor-pointer transition-all ${activeTab === "rejected" ? "ring-2 ring-destructive" : ""}`} onClick={() => { setActiveTab("rejected"); setSelected(new Set()); setFilter("all"); }}>
+            <CardContent className="py-4 text-center">
+              <X className="mx-auto mb-1 h-5 w-5 text-destructive" />
+              <p className="text-2xl font-bold text-destructive">{rejectedCount ?? 0}</p>
+              <p className="text-xs text-muted-foreground">Rejected</p>
+            </CardContent>
+          </Card>
+        </div>
+
         <ReviewStats />
 
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSelected(new Set()); setFilter("all"); }}>
