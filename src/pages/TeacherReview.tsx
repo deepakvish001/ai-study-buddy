@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Shield, Zap, CheckCircle, X, Edit, ArrowUpDown, Clock, User, Calendar } from "lucide-react";
+import { Shield, Zap, CheckCircle, X, Edit, ArrowUpDown, Clock, User, Calendar, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import ReviewStats from "@/components/ReviewStats";
@@ -30,6 +31,7 @@ export default function TeacherReview() {
   const [sortBy, setSortBy] = useState<string>("newest");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState("pending");
+  const [searchQuery, setSearchQuery] = useState("");
 
   if (!hasRole("teacher") && !hasRole("admin")) {
     return (
@@ -77,7 +79,17 @@ export default function TeacherReview() {
   });
 
   const confidenceOrder: Record<string, number> = { low: 0, medium: 1, high: 2 };
-  const filtered = (allAnswers?.filter(a => filter === "all" || a.confidence === filter) ?? []).sort((a, b) => {
+  const searchLower = searchQuery.toLowerCase();
+  const filtered = (allAnswers?.filter(a => {
+    if (filter !== "all" && a.confidence !== filter) return false;
+    if (searchLower) {
+      const title = (a.questions as any)?.title?.toLowerCase() ?? "";
+      const body = a.body?.toLowerCase() ?? "";
+      const qBody = (a.questions as any)?.body?.toLowerCase() ?? "";
+      if (!title.includes(searchLower) && !body.includes(searchLower) && !qBody.includes(searchLower)) return false;
+    }
+    return true;
+  }) ?? []).sort((a, b) => {
     if (sortBy === "newest") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     if (sortBy === "oldest") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     return (confidenceOrder[a.confidence ?? "medium"] ?? 1) - (confidenceOrder[b.confidence ?? "medium"] ?? 1);
@@ -302,6 +314,15 @@ export default function TeacherReview() {
 
           {/* Filters & Batch */}
           <div className="flex items-center gap-3 mb-6 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by question title or answer content..."
+                className="pl-10 bg-card border-border text-foreground h-9"
+              />
+            </div>
             <Select value={filter} onValueChange={setFilter}>
               <SelectTrigger className="w-44 bg-card border-border text-foreground">
                 <SelectValue />
