@@ -229,7 +229,17 @@ export default function QuestionThread() {
             <Card className="bg-muted/30 border-border">
               <CardContent className="py-8 text-center text-muted-foreground">
                 <Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin text-primary" />
-                AI is generating an answer...
+                AI is generating an answer. It will be reviewed by a teacher before appearing.
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Show notice when all answers are pending */}
+          {answers && answers.length > 0 && answers.every(a => a.is_ai && a.status === "pending") && !isTeacher && !isOwner && (
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="py-6 text-center text-muted-foreground">
+                <Shield className="mx-auto mb-2 h-5 w-5 text-primary" />
+                <p className="text-sm">The AI answer is awaiting teacher review. Check back soon!</p>
               </CardContent>
             </Card>
           )}
