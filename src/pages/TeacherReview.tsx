@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Shield, Zap, CheckCircle, X, Edit } from "lucide-react";
+import { Shield, Zap, CheckCircle, X, Edit, ArrowUpDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 
@@ -22,6 +22,7 @@ export default function TeacherReview() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBody, setEditBody] = useState("");
   const [filter, setFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("newest");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   if (!hasRole("teacher") && !hasRole("admin")) {
@@ -47,7 +48,12 @@ export default function TeacherReview() {
     },
   });
 
-  const filtered = pendingAnswers?.filter(a => filter === "all" || a.confidence === filter) ?? [];
+  const confidenceOrder: Record<string, number> = { low: 0, medium: 1, high: 2 };
+  const filtered = (pendingAnswers?.filter(a => filter === "all" || a.confidence === filter) ?? []).sort((a, b) => {
+    if (sortBy === "newest") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    if (sortBy === "oldest") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    return (confidenceOrder[a.confidence ?? "medium"] ?? 1) - (confidenceOrder[b.confidence ?? "medium"] ?? 1);
+  });
   const lowCount = pendingAnswers?.filter(a => a.confidence === "low").length ?? 0;
   const medCount = pendingAnswers?.filter(a => a.confidence === "medium").length ?? 0;
   const highCount = pendingAnswers?.filter(a => a.confidence === "high").length ?? 0;
@@ -101,6 +107,17 @@ export default function TeacherReview() {
               <SelectItem value="low">🔴 Low ({lowCount})</SelectItem>
               <SelectItem value="medium">🟡 Medium ({medCount})</SelectItem>
               <SelectItem value="high">🟢 High ({highCount})</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-48 bg-card border-border text-foreground">
+              <ArrowUpDown className="mr-1 h-3.5 w-3.5 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest first</SelectItem>
+              <SelectItem value="oldest">Oldest first</SelectItem>
+              <SelectItem value="confidence">Low confidence first</SelectItem>
             </SelectContent>
           </Select>
           {selected.size > 0 && (
