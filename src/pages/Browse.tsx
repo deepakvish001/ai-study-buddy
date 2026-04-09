@@ -182,8 +182,24 @@ export default function Browse() {
             );
           })}
         </div>
+        {/* Status Tabs */}
+        <Tabs value={statusTab} onValueChange={(v) => { setStatusTab(v); setPage(0); }} className="mb-6">
+          <TabsList className="bg-muted/50 border border-border">
+            <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-1.5">
+              <Sparkles className="h-3.5 w-3.5" /> All
+            </TabsTrigger>
+            <TabsTrigger value="open" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-1.5">
+              <CircleDot className="h-3.5 w-3.5" /> Open
+            </TabsTrigger>
+            <TabsTrigger value="solved" className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground gap-1.5">
+              <CheckCircle className="h-3.5 w-3.5" /> Solved
+            </TabsTrigger>
+            <TabsTrigger value="unanswered" className="data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground gap-1.5">
+              <AlertCircle className="h-3.5 w-3.5" /> Unanswered
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-        {/* Results Info */}
         {!isLoading && (
           <div className="mb-4 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
