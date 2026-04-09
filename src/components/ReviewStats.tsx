@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart3, CheckCircle, X, Clock, TrendingUp } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { BarChart3, CheckCircle, X, Clock, TrendingUp, AlertTriangle } from "lucide-react";
 
 interface ReviewerStat {
   reviewerId: string;
@@ -15,23 +15,33 @@ interface ReviewerStat {
   avgReviewTimeMs: number | null;
 }
 
+interface RejectionPattern {
+  reason: string;
+  count: number;
+}
+
 export default function ReviewStats() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["review-stats"],
     queryFn: async () => {
-      // Fetch all reviewed AI answers
       const { data: answers } = await supabase
         .from("answers")
         .select("id, status, confidence, created_at, reviewed_at, reviewed_by, is_ai")
         .eq("is_ai", true)
         .in("status", ["approved", "rejected"]);
 
-      if (!answers || answers.length === 0) return { reviewers: [], totals: null };
+      // Fetch rejection reasons separately
+      const { data: rejectedAnswers } = await supabase
+        .from("answers")
+        .select("rejection_reason")
+        .eq("is_ai", true)
+        .eq("status", "rejected")
+        .not("rejection_reason", "is", null);
 
-      // Get unique reviewer IDs
+      if (!answers || answers.length === 0) return { reviewers: [], totals: null, rejectionPatterns: [] };
+
       const reviewerIds = [...new Set(answers.map(a => a.reviewed_by).filter(Boolean))] as string[];
 
-      // Fetch profiles
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, display_name")
@@ -40,7 +50,6 @@ export default function ReviewStats() {
       const profileMap: Record<string, string> = {};
       profiles?.forEach(p => { profileMap[p.user_id] = p.display_name ?? "Unknown"; });
 
-      // Compute per-reviewer stats
       const byReviewer: Record<string, { approved: number; rejected: number; reviewTimes: number[] }> = {};
 
       for (const a of answers) {
@@ -71,12 +80,28 @@ export default function ReviewStats() {
         };
       }).sort((a, b) => b.totalReviews - a.totalReviews);
 
+      // Compute rejection patterns by grouping similar reasons
+      const reasonCounts: Record<string, number> = {};
+      rejectedAnswers?.forEach(a => {
+        const reason = ((a as any).rejection_reason as string).trim().toLowerCase();
+        if (reason) {
+          // Normalize: take first 80 chars for grouping
+          const key = reason.slice(0, 80);
+          reasonCounts[key] = (reasonCounts[key] ?? 0) + 1;
+        }
+      });
+      const rejectionPatterns: RejectionPattern[] = Object.entries(reasonCounts)
+        .map(([reason, count]) => ({ reason, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
       const totalApproved = answers.filter(a => a.status === "approved").length;
       const totalRejected = answers.filter(a => a.status === "rejected").length;
       const totalReviewed = totalApproved + totalRejected;
 
       return {
         reviewers,
+        rejectionPatterns,
         totals: {
           totalReviewed,
           totalApproved,
@@ -157,33 +182,57 @@ export default function ReviewStats() {
         </Card>
       </div>
 
-      {/* Per-reviewer breakdown */}
-      {stats.reviewers.length > 0 && (
-        <Card className="border-border bg-card">
-          <CardContent className="p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-primary" /> Reviewer Breakdown
-            </h3>
-            <div className="space-y-3">
-              {stats.reviewers.map(r => (
-                <div key={r.reviewerId} className="flex items-center justify-between gap-4 text-sm">
-                  <span className="font-medium text-foreground truncate min-w-0">{r.displayName}</span>
-                  <div className="flex items-center gap-4 text-muted-foreground text-xs shrink-0">
-                    <span>{r.totalReviews} reviews</span>
-                    <span className="text-secondary">{r.approved} ✓</span>
-                    <span className="text-destructive">{r.rejected} ✗</span>
-                    <span className="text-primary">{r.approvalRate}%</span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatTime(r.avgReviewTimeMs)}
-                    </span>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Per-reviewer breakdown */}
+        {stats.reviewers.length > 0 && (
+          <Card className="border-border bg-card">
+            <CardContent className="p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" /> Reviewer Breakdown
+              </h3>
+              <div className="space-y-3">
+                {stats.reviewers.map(r => (
+                  <div key={r.reviewerId} className="flex items-center justify-between gap-4 text-sm">
+                    <span className="font-medium text-foreground truncate min-w-0">{r.displayName}</span>
+                    <div className="flex items-center gap-3 text-muted-foreground text-xs shrink-0">
+                      <span>{r.totalReviews} reviews</span>
+                      <span className="text-secondary">{r.approved} ✓</span>
+                      <span className="text-destructive">{r.rejected} ✗</span>
+                      <span className="text-primary">{r.approvalRate}%</span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {formatTime(r.avgReviewTimeMs)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Rejection Patterns */}
+        {stats.rejectionPatterns.length > 0 && (
+          <Card className="border-border bg-card">
+            <CardContent className="p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-destructive" /> Common Rejection Reasons
+              </h3>
+              <div className="space-y-2">
+                {stats.rejectionPatterns.map((p, i) => (
+                  <div key={i} className="flex items-start gap-3 text-sm">
+                    <Badge variant="outline" className="border-destructive/30 text-destructive text-xs shrink-0 mt-0.5">
+                      {p.count}×
+                    </Badge>
+                    <span className="text-muted-foreground capitalize line-clamp-2">{p.reason}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-foreground/60 mt-3">These patterns can help improve AI answer quality</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
