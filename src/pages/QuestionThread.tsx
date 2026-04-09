@@ -272,9 +272,16 @@ export default function QuestionThread() {
 
                       <div className="mt-4 flex items-center justify-between flex-wrap gap-2">
                         <span className="text-xs text-muted-foreground">{(answer as any).author_name} · {formatDistanceToNow(new Date(answer.created_at), { addSuffix: true })}</span>
-                        {(isOwner || isTeacher) && !answer.is_accepted && (
-                          <Button variant="ghost" size="sm" onClick={() => handleAccept(answer.id)} className="text-secondary hover:text-secondary"><CheckCircle className="mr-1 h-3 w-3" /> Accept</Button>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {answer.is_ai && (
+                            <Button variant="ghost" size="sm" onClick={handleRegenerateAI} disabled={regenerating} className="text-primary hover:text-primary/80 text-xs h-7 gap-1">
+                              {regenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Regenerate
+                            </Button>
+                          )}
+                          {(isOwner || isTeacher) && !answer.is_accepted && (
+                            <Button variant="ghost" size="sm" onClick={() => handleAccept(answer.id)} className="text-secondary hover:text-secondary"><CheckCircle className="mr-1 h-3 w-3" /> Accept</Button>
+                          )}
+                        </div>
                       </div>
 
                       <CommentThread answerId={answer.id} />
