@@ -48,7 +48,12 @@ export default function TeacherReview() {
     },
   });
 
-  const filtered = pendingAnswers?.filter(a => filter === "all" || a.confidence === filter) ?? [];
+  const confidenceOrder: Record<string, number> = { low: 0, medium: 1, high: 2 };
+  const filtered = (pendingAnswers?.filter(a => filter === "all" || a.confidence === filter) ?? []).sort((a, b) => {
+    if (sortBy === "newest") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    if (sortBy === "oldest") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    return (confidenceOrder[a.confidence ?? "medium"] ?? 1) - (confidenceOrder[b.confidence ?? "medium"] ?? 1);
+  });
   const lowCount = pendingAnswers?.filter(a => a.confidence === "low").length ?? 0;
   const medCount = pendingAnswers?.filter(a => a.confidence === "medium").length ?? 0;
   const highCount = pendingAnswers?.filter(a => a.confidence === "high").length ?? 0;
