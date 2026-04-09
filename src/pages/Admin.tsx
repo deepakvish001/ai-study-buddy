@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Shield, Users, MessageSquare, Zap, Search, Plus, Minus, AlertTriangle } from "lucide-react";
+import { Shield, Users, MessageSquare, Zap, Search, Plus, Minus, AlertTriangle, GraduationCap, CheckCircle, X } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
 
 type AppRole = "student" | "teacher" | "admin";
@@ -133,6 +134,9 @@ export default function Admin() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Teacher Applications */}
+        <TeacherApplicationsPanel queryClient={queryClient} />
 
         {/* User Management */}
         <Card className="bg-card border-border">
