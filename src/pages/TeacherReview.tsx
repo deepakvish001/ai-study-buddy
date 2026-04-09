@@ -247,6 +247,8 @@ export default function TeacherReview() {
           )}
         </div>
 
+        <ReviewStats />
+
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSelected(new Set()); setFilter("all"); }}>
           <TabsList className="mb-6 bg-muted/50 border border-border">
             <TabsTrigger value="pending" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
