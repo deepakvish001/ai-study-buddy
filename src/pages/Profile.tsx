@@ -74,7 +74,7 @@ export default function Profile() {
     else {
       toast.success("Profile updated!");
       setEditOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["reputation", user.id] });
+      queryClient.invalidateQueries({ queryKey: ["profile-data", user.id] });
       // Force auth context refresh
       window.location.reload();
     }
