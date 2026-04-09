@@ -15,6 +15,7 @@ import { useState } from "react";
 import { Shield, Zap, CheckCircle, X, Edit, ArrowUpDown, Clock, User, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
+import ReviewStats from "@/components/ReviewStats";
 import { formatDistanceToNow, format } from "date-fns";
 
 export default function TeacherReview() {
@@ -245,6 +246,8 @@ export default function TeacherReview() {
             <Badge className="bg-primary/10 text-primary border-primary/20">{pendingCount} pending</Badge>
           )}
         </div>
+
+        <ReviewStats />
 
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSelected(new Set()); setFilter("all"); }}>
           <TabsList className="mb-6 bg-muted/50 border border-border">
