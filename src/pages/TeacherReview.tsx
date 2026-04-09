@@ -24,6 +24,8 @@ export default function TeacherReview() {
   const navigate = useNavigate();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBody, setEditBody] = useState("");
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
   const [filter, setFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -106,13 +108,19 @@ export default function TeacherReview() {
   };
 
   const handleReject = async (answerId: string) => {
+    if (rejectingId !== answerId) {
+      setRejectingId(answerId);
+      setRejectionReason("");
+      return;
+    }
     const { error } = await supabase.from("answers").update({
       status: "rejected" as const,
       reviewed_by: user?.id,
       reviewed_at: new Date().toISOString(),
-    }).eq("id", answerId);
+      rejection_reason: rejectionReason.trim() || null,
+    } as any).eq("id", answerId);
     if (error) toast.error(error.message);
-    else { toast.success("Answer rejected"); invalidateAll(); }
+    else { toast.success("Answer rejected"); setRejectingId(null); setRejectionReason(""); invalidateAll(); }
   };
 
   const handleBatchApprove = async () => {
@@ -213,22 +221,51 @@ export default function TeacherReview() {
               <MarkdownRenderer content={answer.body} />
             </div>
           )}
-          {showActions && (
-            <div className="flex gap-2 mt-4">
-              <Button onClick={() => handleApprove(answer.id)} size="sm" className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
-                <CheckCircle className="mr-1 h-4 w-4" /> Approve
-              </Button>
-              {editingId === answer.id ? (
-                <Button variant="ghost" size="sm" onClick={() => setEditingId(null)} className="text-muted-foreground">Cancel</Button>
-              ) : (
-                <Button variant="outline" size="sm" onClick={() => { setEditingId(answer.id); setEditBody(answer.body); }} className="border-border text-muted-foreground">
-                  <Edit className="mr-1 h-4 w-4" /> Edit & Approve
-                </Button>
-              )}
-              <Button variant="ghost" size="sm" onClick={() => handleReject(answer.id)} className="text-destructive hover:text-destructive">
-                <X className="mr-1 h-4 w-4" /> Reject
-              </Button>
+          {/* Show rejection reason for already-rejected answers */}
+          {answer.status === "rejected" && (answer as any).rejection_reason && (
+            <div className="mt-3 p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+              <p className="text-xs font-medium text-destructive mb-1">Rejection Reason:</p>
+              <p className="text-sm text-muted-foreground">{(answer as any).rejection_reason}</p>
             </div>
+          )}
+          {showActions && (
+            <>
+              {rejectingId === answer.id && (
+                <div className="mt-4 p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                  <label className="text-xs font-medium text-destructive mb-2 block">Why are you rejecting this answer? (optional but helpful)</label>
+                  <Textarea
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="e.g. Incorrect formula, missing context, misleading explanation..."
+                    className="min-h-[80px] bg-card border-border text-foreground text-sm mb-2"
+                    maxLength={500}
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => handleReject(answer.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      <X className="mr-1 h-4 w-4" /> Confirm Reject
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setRejectingId(null)} className="text-muted-foreground">Cancel</Button>
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2 mt-4">
+                <Button onClick={() => handleApprove(answer.id)} size="sm" className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
+                  <CheckCircle className="mr-1 h-4 w-4" /> Approve
+                </Button>
+                {editingId === answer.id ? (
+                  <Button variant="ghost" size="sm" onClick={() => setEditingId(null)} className="text-muted-foreground">Cancel</Button>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => { setEditingId(answer.id); setEditBody(answer.body); }} className="border-border text-muted-foreground">
+                    <Edit className="mr-1 h-4 w-4" /> Edit & Approve
+                  </Button>
+                )}
+                {rejectingId !== answer.id && (
+                  <Button variant="ghost" size="sm" onClick={() => handleReject(answer.id)} className="text-destructive hover:text-destructive">
+                    <X className="mr-1 h-4 w-4" /> Reject
+                  </Button>
+                )}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
