@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Zap, ThumbsUp, ThumbsDown, CheckCircle, Shield, Loader2, MessageSquare, Send, FileText, Share2 } from "lucide-react";
+import { Zap, ThumbsUp, ThumbsDown, CheckCircle, Shield, Loader2, MessageSquare, Send, FileText, Share2, ArrowLeft } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import CommentThread from "@/components/CommentThread";
@@ -22,6 +22,7 @@ export default function QuestionThread() {
   const { id } = useParams<{ id: string }>();
   const { user, hasRole } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [newAnswer, setNewAnswer] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -66,22 +67,32 @@ export default function QuestionThread() {
     if (!user) { toast.error("Sign in to vote"); return; }
     const currentVote = userVotes?.[answerId];
 
-    if (currentVote === type) {
-      // Remove vote
-      await supabase.from("votes").delete().eq("user_id", user.id).eq("answer_id", answerId);
-    } else {
-      // Upsert vote
-      await supabase.from("votes").upsert({ user_id: user.id, answer_id: answerId, vote_type: type }, { onConflict: "user_id,answer_id" });
+    try {
+      if (currentVote === type) {
+        // Remove vote
+        await supabase.from("votes").delete().eq("user_id", user.id).eq("answer_id", answerId);
+      } else if (currentVote) {
+        // Change vote type
+        await supabase.from("votes").update({ vote_type: type }).eq("user_id", user.id).eq("answer_id", answerId);
+      } else {
+        // New vote
+        await supabase.from("votes").insert({ user_id: user.id, answer_id: answerId, vote_type: type });
+      }
+
+      // Recalculate counts from votes table
+      const { data: voteCounts } = await supabase.from("votes").select("vote_type").eq("answer_id", answerId);
+      const ups = voteCounts?.filter(v => v.vote_type === "up").length ?? 0;
+      const downs = voteCounts?.filter(v => v.vote_type === "down").length ?? 0;
+      await supabase.from("answers").update({ upvotes: ups, downvotes: downs }).eq("id", answerId);
+
+      // Invalidate both queries to refresh UI
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["answers", id] }),
+        queryClient.invalidateQueries({ queryKey: ["user-votes", id, user.id] }),
+      ]);
+    } catch (err: any) {
+      toast.error("Failed to vote: " + err.message);
     }
-
-    // Recalculate counts from votes table
-    const { data: voteCounts } = await supabase.from("votes").select("vote_type").eq("answer_id", answerId);
-    const ups = voteCounts?.filter(v => v.vote_type === "up").length ?? 0;
-    const downs = voteCounts?.filter(v => v.vote_type === "down").length ?? 0;
-    await supabase.from("answers").update({ upvotes: ups, downvotes: downs }).eq("id", answerId);
-
-    queryClient.invalidateQueries({ queryKey: ["answers", id] });
-    queryClient.invalidateQueries({ queryKey: ["user-votes", id, user.id] });
   };
 
   const handleAccept = async (answerId: string) => {
@@ -140,6 +151,11 @@ export default function QuestionThread() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <div className="container mx-auto max-w-4xl px-4 py-6 sm:py-10 flex-1">
+        {/* Back button */}
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mb-4 text-muted-foreground hover:text-foreground -ml-2">
+          <ArrowLeft className="mr-1 h-4 w-4" /> Back
+        </Button>
+
         {/* Question */}
         <div className="mb-8">
           <div className="flex items-start gap-3">
