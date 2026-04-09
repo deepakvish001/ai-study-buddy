@@ -151,6 +151,11 @@ export default function QuestionThread() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <div className="container mx-auto max-w-4xl px-4 py-6 sm:py-10 flex-1">
+        {/* Back button */}
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mb-4 text-muted-foreground hover:text-foreground -ml-2">
+          <ArrowLeft className="mr-1 h-4 w-4" /> Back
+        </Button>
+
         {/* Question */}
         <div className="mb-8">
           <div className="flex items-start gap-3">
