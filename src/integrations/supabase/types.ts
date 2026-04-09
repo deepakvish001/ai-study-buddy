@@ -24,6 +24,7 @@ export type Database = {
           is_accepted: boolean
           is_ai: boolean
           question_id: string
+          rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           sources_json: Json | null
@@ -41,6 +42,7 @@ export type Database = {
           is_accepted?: boolean
           is_ai?: boolean
           question_id: string
+          rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           sources_json?: Json | null
@@ -58,6 +60,7 @@ export type Database = {
           is_accepted?: boolean
           is_ai?: boolean
           question_id?: string
+          rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           sources_json?: Json | null
