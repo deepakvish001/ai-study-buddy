@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { User, MessageSquare, ThumbsUp, Zap, Shield, Star, Edit, Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { User, MessageSquare, ThumbsUp, Zap, Shield, Star, Edit, Loader2, GraduationCap, CheckCircle, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
@@ -196,6 +197,9 @@ export default function Profile() {
             </Link>
           </div>
         )}
+
+        {/* Apply for Teacher/Mentor */}
+        <TeacherApplicationSection userId={user.id} reputation={reputation} isTeacher={hasRole("teacher") || hasRole("admin")} />
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="bg-card border-border">
