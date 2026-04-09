@@ -109,6 +109,17 @@ export default function TeacherReview() {
               <SelectItem value="high">🟢 High ({highCount})</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-48 bg-card border-border text-foreground">
+              <ArrowUpDown className="mr-1 h-3.5 w-3.5 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest first</SelectItem>
+              <SelectItem value="oldest">Oldest first</SelectItem>
+              <SelectItem value="confidence">Low confidence first</SelectItem>
+            </SelectContent>
+          </Select>
           {selected.size > 0 && (
             <Button size="sm" onClick={handleBatchApprove} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
               <CheckCircle className="mr-1 h-4 w-4" /> Approve {selected.size} Selected
