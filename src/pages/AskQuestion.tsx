@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
+import FileUpload, { type UploadedFile } from "@/components/FileUpload";
 import { Zap, X, Loader2 } from "lucide-react";
 
 const SUGGESTED_TAGS = ["Mathematics", "Physics", "Chemistry", "Biology", "Computer Science", "English", "History", "Economics"];
@@ -21,10 +22,10 @@ export default function AskQuestion() {
   const [tagInput, setTagInput] = useState("");
   const [similar, setSimilar] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [attachments, setAttachments] = useState<UploadedFile[]>([]);
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Search similar questions while typing title
   useEffect(() => {
     if (title.length < 5) { setSimilar([]); return; }
     const timer = setTimeout(async () => {
@@ -53,16 +54,21 @@ export default function AskQuestion() {
 
     setLoading(true);
     try {
+      const attachmentData = attachments.map(f => ({ name: f.name, url: f.url, type: f.type }));
       const { data: question, error } = await supabase
         .from("questions")
-        .insert({ user_id: user.id, title: title.trim(), body: body.trim(), tags })
+        .insert({
+          user_id: user.id,
+          title: title.trim(),
+          body: body.trim(),
+          tags,
+          attachments: attachmentData,
+        })
         .select("id")
         .single();
       if (error) throw error;
 
-      // Trigger AI answer in background
       triggerAIAnswer(question.id, title, body);
-
       toast.success("Question posted! AI is generating an answer...");
       navigate(`/question/${question.id}`);
     } catch (err: any) {
@@ -75,8 +81,8 @@ export default function AskQuestion() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto max-w-3xl px-4 py-10">
-        <h1 className="mb-8 text-3xl font-bold text-foreground">Ask a Doubt</h1>
+      <div className="container mx-auto max-w-3xl px-4 py-6 sm:py-10">
+        <h1 className="mb-6 sm:mb-8 text-2xl sm:text-3xl font-bold text-foreground">Ask a Doubt</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
@@ -123,9 +129,20 @@ export default function AskQuestion() {
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="Describe your doubt in detail. Include what you've already tried..."
-              className="min-h-[200px] bg-card border-border text-foreground"
+              className="min-h-[160px] sm:min-h-[200px] bg-card border-border text-foreground"
               required
             />
+          </div>
+
+          {/* File uploads */}
+          <div className="space-y-2">
+            <Label className="text-foreground">Attachments</Label>
+            {user && (
+              <FileUpload userId={user.id} files={attachments} onChange={setAttachments} />
+            )}
+            {!user && (
+              <p className="text-sm text-muted-foreground">Sign in to attach files.</p>
+            )}
           </div>
 
           <div className="space-y-2">
