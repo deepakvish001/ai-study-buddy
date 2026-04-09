@@ -177,6 +177,36 @@ export type Database = {
         }
         Relationships: []
       }
+      teacher_applications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["application_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["application_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["application_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -252,6 +282,7 @@ export type Database = {
       answer_confidence: "high" | "medium" | "low"
       answer_status: "approved" | "pending" | "rejected"
       app_role: "student" | "teacher" | "admin"
+      application_status: "pending" | "approved" | "rejected"
       question_status: "open" | "closed" | "resolved"
       vote_type: "up" | "down"
     }
@@ -384,6 +415,7 @@ export const Constants = {
       answer_confidence: ["high", "medium", "low"],
       answer_status: ["approved", "pending", "rejected"],
       app_role: ["student", "teacher", "admin"],
+      application_status: ["pending", "approved", "rejected"],
       question_status: ["open", "closed", "resolved"],
       vote_type: ["up", "down"],
     },
