@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { useState } from "react";
 import { Zap, ThumbsUp, ThumbsDown, CheckCircle, Shield, Loader2, MessageSquare, Send, FileText, Share2, ArrowLeft } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
@@ -25,6 +25,7 @@ export default function QuestionThread() {
   const navigate = useNavigate();
   const [newAnswer, setNewAnswer] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const aiRequestedRef = useRef<string | null>(null);
 
   const { data: question, isLoading } = useQuery({
     queryKey: ["question", id],
@@ -48,10 +49,31 @@ export default function QuestionThread() {
       return data.map(a => ({ ...a, author_name: a.user_id ? profileMap[a.user_id] ?? "Anonymous" : "AI Bot" }));
     },
     enabled: !!id,
-    refetchInterval: 5000,
+    refetchInterval: ({ state }) => state.data?.length ? false : 5000,
   });
 
-  // Fetch user's votes for this question's answers
+  useEffect(() => {
+    if (!id || !question || answers === undefined || answers.length > 0 || aiRequestedRef.current === id) return;
+
+    aiRequestedRef.current = id;
+
+    const ensureAIAnswer = async () => {
+      const { error } = await supabase.functions.invoke("ai-answer", {
+        body: { questionId: id, title: question.title, body: question.body },
+      });
+
+      if (error) {
+        aiRequestedRef.current = null;
+        console.error("AI answer generation failed:", error);
+        return;
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["answers", id] });
+    };
+
+    void ensureAIAnswer();
+  }, [id, question, answers, queryClient]);
+
   const { data: userVotes } = useQuery({
     queryKey: ["user-votes", id, user?.id],
     queryFn: async () => {
@@ -69,23 +91,18 @@ export default function QuestionThread() {
 
     try {
       if (currentVote === type) {
-        // Remove vote
         await supabase.from("votes").delete().eq("user_id", user.id).eq("answer_id", answerId);
       } else if (currentVote) {
-        // Change vote type
         await supabase.from("votes").update({ vote_type: type }).eq("user_id", user.id).eq("answer_id", answerId);
       } else {
-        // New vote
         await supabase.from("votes").insert({ user_id: user.id, answer_id: answerId, vote_type: type });
       }
 
-      // Recalculate counts from votes table
       const { data: voteCounts } = await supabase.from("votes").select("vote_type").eq("answer_id", answerId);
       const ups = voteCounts?.filter(v => v.vote_type === "up").length ?? 0;
       const downs = voteCounts?.filter(v => v.vote_type === "down").length ?? 0;
       await supabase.from("answers").update({ upvotes: ups, downvotes: downs }).eq("id", answerId);
 
-      // Invalidate both queries to refresh UI
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["answers", id] }),
         queryClient.invalidateQueries({ queryKey: ["user-votes", id, user.id] }),
@@ -151,12 +168,10 @@ export default function QuestionThread() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <div className="container mx-auto max-w-4xl px-4 py-6 sm:py-10 flex-1">
-        {/* Back button */}
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mb-4 text-muted-foreground hover:text-foreground -ml-2">
           <ArrowLeft className="mr-1 h-4 w-4" /> Back
         </Button>
 
-        {/* Question */}
         <div className="mb-8">
           <div className="flex items-start gap-3">
             <div className="flex-1 min-w-0">
@@ -189,7 +204,6 @@ export default function QuestionThread() {
           </div>
         </div>
 
-        {/* Answers */}
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-foreground flex items-center gap-2"><MessageSquare className="h-5 w-5" /> {answers?.length ?? 0} Answers</h2>
 
@@ -254,7 +268,6 @@ export default function QuestionThread() {
           })}
         </div>
 
-        {/* Post Answer */}
         {user && (
           <form onSubmit={handleSubmitAnswer} className="mt-8">
             <h3 className="text-lg font-semibold text-foreground mb-3">Your Answer</h3>
