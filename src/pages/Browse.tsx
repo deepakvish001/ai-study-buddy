@@ -10,10 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Search, CheckCircle, MessageSquare, Clock, User, Zap, ThumbsUp,
   Calculator, Atom, FlaskConical, Leaf, Monitor, BookOpen, Landmark, TrendingUp,
-  HelpCircle, Filter, ChevronLeft, ChevronRight, Sparkles
+  HelpCircle, Filter, ChevronLeft, ChevronRight, Sparkles, CircleDot, AlertCircle
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -49,6 +50,7 @@ export default function Browse() {
   const activeTag = searchParams.get("tag");
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(0);
+  const [statusTab, setStatusTab] = useState("all");
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -63,7 +65,7 @@ export default function Browse() {
   }, [search]);
 
   const { data: results, isLoading } = useQuery({
-    queryKey: ["browse", debouncedSearch, activeTag, sort, page],
+    queryKey: ["browse", debouncedSearch, activeTag, sort, page, statusTab],
     queryFn: async () => {
       let query = supabase
         .from("questions")
@@ -72,6 +74,10 @@ export default function Browse() {
 
       if (debouncedSearch) query = query.ilike("title", `%${debouncedSearch}%`);
       if (activeTag) query = query.contains("tags", [activeTag]);
+
+      if (statusTab === "solved") query = query.eq("status", "resolved");
+      else if (statusTab === "open") query = query.eq("status", "open");
+      else if (statusTab === "unanswered") query = query.eq("status", "open");
 
       if (sort === "newest") query = query.order("created_at", { ascending: false });
       else if (sort === "oldest") query = query.order("created_at", { ascending: true });
@@ -84,7 +90,9 @@ export default function Browse() {
       const profileMap = Object.fromEntries((profiles ?? []).map(p => [p.user_id, p.display_name]));
 
       let sorted = data;
-      if (sort === "unanswered") sorted = data.filter(q => !q.answers?.length).concat(data.filter(q => q.answers?.length));
+      if (sort === "unanswered" || statusTab === "unanswered") {
+        sorted = data.filter(q => !q.answers?.length).concat(data.filter(q => q.answers?.length));
+      }
 
       return { questions: sorted, profiles: profileMap };
     },
@@ -174,8 +182,24 @@ export default function Browse() {
             );
           })}
         </div>
+        {/* Status Tabs */}
+        <Tabs value={statusTab} onValueChange={(v) => { setStatusTab(v); setPage(0); }} className="mb-6">
+          <TabsList className="bg-muted/50 border border-border">
+            <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-1.5">
+              <Sparkles className="h-3.5 w-3.5" /> All
+            </TabsTrigger>
+            <TabsTrigger value="open" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-1.5">
+              <CircleDot className="h-3.5 w-3.5" /> Open
+            </TabsTrigger>
+            <TabsTrigger value="solved" className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground gap-1.5">
+              <CheckCircle className="h-3.5 w-3.5" /> Solved
+            </TabsTrigger>
+            <TabsTrigger value="unanswered" className="data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground gap-1.5">
+              <AlertCircle className="h-3.5 w-3.5" /> Unanswered
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-        {/* Results Info */}
         {!isLoading && (
           <div className="mb-4 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
