@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Zap, LogOut, BookOpen, Shield, Menu, Settings, Trophy } from "lucide-react";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function Navbar() {
   const { user, profile, hasRole, signOut } = useAuth();
@@ -79,6 +80,7 @@ export default function Navbar() {
               </Button>
             </Link>
           )}
+          <NotificationBell />
           <Link to="/profile" onClick={close}>
             <Button variant="ghost" size="sm" className={`w-full justify-start ${isActive("/profile") ? activeClass : inactiveClass}`}>
               <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">{initials}</div>
@@ -145,6 +147,7 @@ export default function Navbar() {
                   </Button>
                 </Link>
               )}
+              <NotificationBell />
               <Link to="/profile">
                 <Button variant="ghost" size="icon" className={isActive("/profile") ? activeClass : inactiveClass}>
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary">{initials}</div>
