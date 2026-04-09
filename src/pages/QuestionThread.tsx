@@ -24,11 +24,16 @@ export default function QuestionThread() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("questions")
-        .select("*, profiles!inner(display_name)")
+        .select("*")
         .eq("id", id!)
         .single();
       if (error) throw error;
-      return data;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("user_id", data.user_id)
+        .single();
+      return { ...data, author_name: profile?.display_name ?? "Anonymous" };
     },
     enabled: !!id,
   });
@@ -38,12 +43,18 @@ export default function QuestionThread() {
     queryFn: async () => {
       const { data } = await supabase
         .from("answers")
-        .select("*, profiles(display_name)")
+        .select("*")
         .eq("question_id", id!)
         .order("is_ai", { ascending: false })
         .order("is_accepted", { ascending: false })
         .order("upvotes", { ascending: false });
-      return data ?? [];
+      if (!data?.length) return [];
+      const userIds = [...new Set(data.filter(a => a.user_id).map(a => a.user_id!))];
+      const { data: profiles } = userIds.length
+        ? await supabase.from("profiles").select("user_id, display_name").in("user_id", userIds)
+        : { data: [] };
+      const profileMap = Object.fromEntries((profiles ?? []).map(p => [p.user_id, p.display_name]));
+      return data.map(a => ({ ...a, author_name: a.user_id ? profileMap[a.user_id] ?? "Anonymous" : "AI Bot" }));
     },
     enabled: !!id,
     refetchInterval: 5000, // Poll for AI answer
@@ -147,7 +158,7 @@ export default function QuestionThread() {
                   <Badge key={t} variant="outline" className="border-border text-muted-foreground">{t}</Badge>
                 ))}
                 <span className="text-xs text-muted-foreground">
-                  Asked by {(question as any).profiles?.display_name} · {formatDistanceToNow(new Date(question.created_at), { addSuffix: true })}
+                  Asked by {(question as any).author_name} · {formatDistanceToNow(new Date(question.created_at), { addSuffix: true })}
                 </span>
               </div>
             </div>
@@ -232,7 +243,7 @@ export default function QuestionThread() {
                     {/* Meta */}
                     <div className="mt-4 flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">
-                        {answer.is_ai ? "AI Bot" : (answer as any).profiles?.display_name} · {formatDistanceToNow(new Date(answer.created_at), { addSuffix: true })}
+                        {(answer as any).author_name} · {formatDistanceToNow(new Date(answer.created_at), { addSuffix: true })}
                       </span>
                       {(isOwner || isTeacher) && !answer.is_accepted && (
                         <Button variant="ghost" size="sm" onClick={() => handleAccept(answer.id)} className="text-secondary hover:text-secondary">

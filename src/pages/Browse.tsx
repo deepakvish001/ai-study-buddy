@@ -21,7 +21,7 @@ export default function Browse() {
     queryFn: async () => {
       let query = supabase
         .from("questions")
-        .select("id, title, body, tags, status, created_at, profiles!inner(display_name), answers(id)")
+        .select("id, title, body, tags, status, created_at, user_id, answers(id)")
         .order("created_at", { ascending: false })
         .limit(50);
 
