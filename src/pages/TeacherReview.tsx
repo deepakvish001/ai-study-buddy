@@ -95,6 +95,43 @@ export default function TeacherReview() {
     return (confidenceOrder[a.confidence ?? "medium"] ?? 1) - (confidenceOrder[b.confidence ?? "medium"] ?? 1);
   });
 
+  // Fetch global pending count (independent of active tab filter)
+  const { data: globalPendingCount } = useQuery({
+    queryKey: ["pending-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("answers")
+        .select("*", { count: "exact", head: true })
+        .eq("is_ai", true)
+        .eq("status", "pending");
+      return count ?? 0;
+    },
+  });
+
+  const { data: approvedCount } = useQuery({
+    queryKey: ["approved-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("answers")
+        .select("*", { count: "exact", head: true })
+        .eq("is_ai", true)
+        .eq("status", "approved");
+      return count ?? 0;
+    },
+  });
+
+  const { data: rejectedCount } = useQuery({
+    queryKey: ["rejected-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("answers")
+        .select("*", { count: "exact", head: true })
+        .eq("is_ai", true)
+        .eq("status", "rejected");
+      return count ?? 0;
+    },
+  });
+
   const pendingCount = allAnswers?.filter(a => a.status === "pending").length ?? 0;
   const lowCount = allAnswers?.filter(a => a.confidence === "low").length ?? 0;
   const medCount = allAnswers?.filter(a => a.confidence === "medium").length ?? 0;
