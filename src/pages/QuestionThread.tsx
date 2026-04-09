@@ -25,6 +25,7 @@ export default function QuestionThread() {
   const navigate = useNavigate();
   const [newAnswer, setNewAnswer] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
   const aiRequestedRef = useRef<string | null>(null);
 
   const { data: question, isLoading } = useQuery({
@@ -135,6 +136,23 @@ export default function QuestionThread() {
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
     toast.success("Link copied to clipboard!");
+  };
+
+  const handleRegenerateAI = async () => {
+    if (!question || regenerating) return;
+    setRegenerating(true);
+    try {
+      const { error } = await supabase.functions.invoke("ai-answer", {
+        body: { questionId: id, title: question.title, body: question.body, regenerate: true },
+      });
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["answers", id] });
+      toast.success("AI answer regenerated!");
+    } catch (err: any) {
+      toast.error("Failed to regenerate: " + (err.message || "Unknown error"));
+    } finally {
+      setRegenerating(false);
+    }
   };
 
   if (isLoading) {
