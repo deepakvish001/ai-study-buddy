@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Zap } from "lucide-react";
+import logoImg from "/favicon.png";
 
 export default function Footer() {
   return (
@@ -7,9 +7,7 @@ export default function Footer() {
       <div className="container mx-auto px-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
-              <Zap className="h-4 w-4 text-primary-foreground" />
-            </div>
+            <img src={logoImg} alt="DoubtSolver" className="h-7 w-7 rounded-md" />
             <span className="font-semibold text-foreground">DoubtSolver</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
