@@ -1,8 +1,9 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Paperclip, X, FileText, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Paperclip, X, FileText, Loader2, Upload } from "lucide-react";
 
 interface UploadedFile {
   name: string;
@@ -19,46 +20,60 @@ interface FileUploadProps {
 }
 
 const ACCEPTED = "image/png,image/jpeg,image/webp,image/gif,application/pdf";
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_SIZE = 5 * 1024 * 1024;
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
 
 export default function FileUpload({ userId, files, onChange, maxFiles = 5 }: FileUploadProps) {
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files;
-    if (!selected?.length) return;
-
+  const processFiles = async (selected: FileList) => {
     const remaining = maxFiles - files.length;
     if (remaining <= 0) { toast.error(`Max ${maxFiles} files allowed`); return; }
 
     setUploading(true);
+    setProgress(0);
     const newFiles: UploadedFile[] = [];
+    const total = Math.min(selected.length, remaining);
 
-    for (let i = 0; i < Math.min(selected.length, remaining); i++) {
+    for (let i = 0; i < total; i++) {
       const file = selected[i];
       if (file.size > MAX_SIZE) { toast.error(`${file.name} exceeds 5MB limit`); continue; }
+      if (!ACCEPTED.split(",").some(t => file.type === t)) { toast.error(`${file.name}: unsupported file type`); continue; }
 
       const ext = file.name.split(".").pop();
       const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-      const { error } = await supabase.storage
-        .from("question-attachments")
-        .upload(path, file, { contentType: file.type });
-
+      const { error } = await supabase.storage.from("question-attachments").upload(path, file, { contentType: file.type });
       if (error) { toast.error(`Failed to upload ${file.name}`); continue; }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("question-attachments")
-        .getPublicUrl(path);
-
+      const { data: { publicUrl } } = supabase.storage.from("question-attachments").getPublicUrl(path);
       newFiles.push({ name: file.name, path, url: publicUrl, type: file.type });
+      setProgress(((i + 1) / total) * 100);
     }
 
     onChange([...files, ...newFiles]);
     setUploading(false);
+    setProgress(0);
     if (inputRef.current) inputRef.current.value = "";
   };
+
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.length) processFiles(e.target.files);
+  };
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files?.length) processFiles(e.dataTransfer.files);
+  }, [files, userId, maxFiles]);
 
   const removeFile = async (index: number) => {
     const file = files[index];
@@ -68,26 +83,34 @@ export default function FileUpload({ userId, files, onChange, maxFiles = 5 }: Fi
 
   return (
     <div className="space-y-3">
-      <input
-        ref={inputRef}
-        type="file"
-        accept={ACCEPTED}
-        multiple
-        onChange={handleUpload}
-        className="hidden"
-      />
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={uploading || files.length >= maxFiles}
+      <input ref={inputRef} type="file" accept={ACCEPTED} multiple onChange={handleUpload} className="hidden" />
+
+      {/* Drag & Drop Zone */}
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
-        className="border-border text-muted-foreground hover:border-primary hover:text-primary"
+        className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 cursor-pointer transition-colors ${
+          dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+        } ${uploading ? "pointer-events-none opacity-60" : ""}`}
       >
-        {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Paperclip className="mr-2 h-4 w-4" />}
-        {uploading ? "Uploading..." : "Attach Files"}
-      </Button>
-      <p className="text-xs text-muted-foreground">PDF or images up to 5MB each (max {maxFiles})</p>
+        {uploading ? (
+          <>
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Uploading...</p>
+            <Progress value={progress} className="h-1.5 w-full max-w-xs" />
+          </>
+        ) : (
+          <>
+            <Upload className="h-6 w-6 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              <span className="text-primary font-medium">Click to upload</span> or drag and drop
+            </p>
+            <p className="text-xs text-muted-foreground">PDF or images up to 5MB each (max {maxFiles})</p>
+          </>
+        )}
+      </div>
 
       {files.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -103,11 +126,7 @@ export default function FileUpload({ userId, files, onChange, maxFiles = 5 }: Fi
               <div className="p-1.5">
                 <p className="text-xs text-muted-foreground truncate">{file.name}</p>
               </div>
-              <button
-                type="button"
-                onClick={() => removeFile(i)}
-                className="absolute top-1 right-1 rounded-full bg-background/80 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
+              <button type="button" onClick={() => removeFile(i)} className="absolute top-1 right-1 rounded-full bg-background/80 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <X className="h-3 w-3 text-foreground" />
               </button>
             </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,14 +6,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import FileUpload, { type UploadedFile } from "@/components/FileUpload";
-import { Zap, X, Loader2 } from "lucide-react";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
+import { Zap, X, Loader2, Clock } from "lucide-react";
 
 const SUGGESTED_TAGS = ["Mathematics", "Physics", "Chemistry", "Biology", "Computer Science", "English", "History", "Economics"];
+const TITLE_MAX = 150;
+const BODY_MAX = 5000;
 
 export default function AskQuestion() {
   const [title, setTitle] = useState("");
@@ -23,17 +28,14 @@ export default function AskQuestion() {
   const [similar, setSimilar] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [attachments, setAttachments] = useState<UploadedFile[]>([]);
+  const [previewTab, setPreviewTab] = useState("write");
   const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (title.length < 5) { setSimilar([]); return; }
     const timer = setTimeout(async () => {
-      const { data } = await supabase
-        .from("questions")
-        .select("id, title, status")
-        .ilike("title", `%${title}%`)
-        .limit(3);
+      const { data } = await supabase.from("questions").select("id, title, status").ilike("title", `%${title}%`).limit(3);
       setSimilar(data ?? []);
     }, 500);
     return () => clearTimeout(timer);
@@ -41,10 +43,7 @@ export default function AskQuestion() {
 
   const addTag = (tag: string) => {
     const t = tag.trim();
-    if (t && !tags.includes(t) && tags.length < 5) {
-      setTags([...tags, t]);
-      setTagInput("");
-    }
+    if (t && !tags.includes(t) && tags.length < 5) { setTags([...tags, t]); setTagInput(""); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,19 +54,8 @@ export default function AskQuestion() {
     setLoading(true);
     try {
       const attachmentData = attachments.map(f => ({ name: f.name, url: f.url, type: f.type }));
-      const { data: question, error } = await supabase
-        .from("questions")
-        .insert({
-          user_id: user.id,
-          title: title.trim(),
-          body: body.trim(),
-          tags,
-          attachments: attachmentData,
-        })
-        .select("id")
-        .single();
+      const { data: question, error } = await supabase.from("questions").insert({ user_id: user.id, title: title.trim(), body: body.trim(), tags, attachments: attachmentData }).select("id").single();
       if (error) throw error;
-
       triggerAIAnswer(question.id, title, body);
       toast.success("Question posted! AI is generating an answer...");
       navigate(`/question/${question.id}`);
@@ -79,43 +67,30 @@ export default function AskQuestion() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <div className="container mx-auto max-w-3xl px-4 py-6 sm:py-10">
+      <div className="container mx-auto max-w-3xl px-4 py-6 sm:py-10 flex-1">
         <h1 className="mb-6 sm:mb-8 text-2xl sm:text-3xl font-bold text-foreground">Ask a Doubt</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-foreground">Title</Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="What's your doubt? Be specific..."
-              className="bg-card border-border text-foreground"
-              required
-            />
+            <div className="flex items-center justify-between">
+              <Label htmlFor="title" className="text-foreground">Title</Label>
+              <span className={`text-xs ${title.length > TITLE_MAX ? "text-destructive" : "text-muted-foreground"}`}>{title.length}/{TITLE_MAX}</span>
+            </div>
+            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value.slice(0, TITLE_MAX))} placeholder="What's your doubt? Be specific..." className="bg-card border-border text-foreground" required />
           </div>
 
           {similar.length > 0 && (
             <Card className="bg-muted/50 border-primary/20">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-primary flex items-center gap-1">
-                  <Zap className="h-3 w-3" /> Similar questions found
-                </CardTitle>
+                <CardTitle className="text-sm text-primary flex items-center gap-1"><Zap className="h-3 w-3" /> Similar questions found</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {similar.map((q) => (
-                  <button
-                    key={q.id}
-                    type="button"
-                    onClick={() => navigate(`/question/${q.id}`)}
-                    className="block w-full text-left text-sm text-muted-foreground hover:text-primary transition-colors"
-                  >
+                  <button key={q.id} type="button" onClick={() => navigate(`/question/${q.id}`)} className="block w-full text-left text-sm text-muted-foreground hover:text-primary transition-colors">
                     {q.title}
-                    {q.status === "resolved" && (
-                      <Badge className="ml-2 bg-secondary/10 text-secondary border-0 text-xs">Resolved</Badge>
-                    )}
+                    {q.status === "resolved" && <Badge className="ml-2 bg-secondary/10 text-secondary border-0 text-xs">Resolved</Badge>}
                   </button>
                 ))}
               </CardContent>
@@ -123,26 +98,29 @@ export default function AskQuestion() {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="body" className="text-foreground">Description</Label>
-            <Textarea
-              id="body"
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder="Describe your doubt in detail. Include what you've already tried..."
-              className="min-h-[160px] sm:min-h-[200px] bg-card border-border text-foreground"
-              required
-            />
+            <div className="flex items-center justify-between">
+              <Label className="text-foreground">Description</Label>
+              <span className={`text-xs ${body.length > BODY_MAX ? "text-destructive" : "text-muted-foreground"}`}>{body.length}/{BODY_MAX}</span>
+            </div>
+            <Tabs value={previewTab} onValueChange={setPreviewTab}>
+              <TabsList className="bg-muted border border-border">
+                <TabsTrigger value="write" className="text-xs">Write</TabsTrigger>
+                <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
+              </TabsList>
+              <TabsContent value="write" className="mt-2">
+                <Textarea id="body" value={body} onChange={(e) => setBody(e.target.value.slice(0, BODY_MAX))} placeholder="Describe your doubt in detail. Supports markdown and LaTeX ($...$)..." className="min-h-[160px] sm:min-h-[200px] bg-card border-border text-foreground" required />
+              </TabsContent>
+              <TabsContent value="preview" className="mt-2">
+                <div className="min-h-[160px] sm:min-h-[200px] rounded-md border border-border bg-card p-4">
+                  {body.trim() ? <MarkdownRenderer content={body} /> : <p className="text-muted-foreground text-sm">Nothing to preview</p>}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
-          {/* File uploads */}
           <div className="space-y-2">
             <Label className="text-foreground">Attachments</Label>
-            {user && (
-              <FileUpload userId={user.id} files={attachments} onChange={setAttachments} />
-            )}
-            {!user && (
-              <p className="text-sm text-muted-foreground">Sign in to attach files.</p>
-            )}
+            {user ? <FileUpload userId={user.id} files={attachments} onChange={setAttachments} /> : <p className="text-sm text-muted-foreground">Sign in to attach files.</p>}
           </div>
 
           <div className="space-y-2">
@@ -151,51 +129,34 @@ export default function AskQuestion() {
               {tags.map((t) => (
                 <Badge key={t} className="bg-primary/10 text-primary border-primary/20">
                   {t}
-                  <button type="button" onClick={() => setTags(tags.filter((x) => x !== t))} className="ml-1">
-                    <X className="h-3 w-3" />
-                  </button>
+                  <button type="button" onClick={() => setTags(tags.filter((x) => x !== t))} className="ml-1"><X className="h-3 w-3" /></button>
                 </Badge>
               ))}
             </div>
-            <div className="flex gap-2">
-              <Input
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                placeholder="Add a tag..."
-                className="bg-card border-border text-foreground"
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(tagInput); } }}
-              />
-            </div>
+            <Input value={tagInput} onChange={(e) => setTagInput(e.target.value)} placeholder="Add a tag..." className="bg-card border-border text-foreground" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(tagInput); } }} />
             <div className="flex flex-wrap gap-1 mt-2">
               {SUGGESTED_TAGS.filter((t) => !tags.includes(t)).map((t) => (
                 <button key={t} type="button" onClick={() => addTag(t)}>
-                  <Badge variant="outline" className="text-xs cursor-pointer border-border text-muted-foreground hover:border-primary hover:text-primary">
-                    + {t}
-                  </Badge>
+                  <Badge variant="outline" className="text-xs cursor-pointer border-border text-muted-foreground hover:border-primary hover:text-primary">+ {t}</Badge>
                 </button>
               ))}
             </div>
           </div>
 
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" /> Estimated AI response time: ~5-10 seconds
+          </div>
+
           <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={loading}>
-            {loading ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Posting...</>
-            ) : (
-              <><Zap className="mr-2 h-4 w-4" /> Post Question & Get AI Answer</>
-            )}
+            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Posting...</> : <><Zap className="mr-2 h-4 w-4" /> Post Question & Get AI Answer</>}
           </Button>
         </form>
       </div>
+      <Footer />
     </div>
   );
 }
 
 async function triggerAIAnswer(questionId: string, title: string, body: string) {
-  try {
-    await supabase.functions.invoke("ai-answer", {
-      body: { questionId, title, body },
-    });
-  } catch (err) {
-    console.error("AI answer generation failed:", err);
-  }
+  try { await supabase.functions.invoke("ai-answer", { body: { questionId, title, body } }); } catch (err) { console.error("AI answer generation failed:", err); }
 }
