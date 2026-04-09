@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Zap, ThumbsUp, ThumbsDown, CheckCircle, Shield, Loader2, MessageSquare, Send, FileText, Share2, ArrowLeft } from "lucide-react";
+import { Zap, ThumbsUp, ThumbsDown, CheckCircle, Shield, Loader2, MessageSquare, Send, FileText, Share2, ArrowLeft, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import CommentThread from "@/components/CommentThread";
@@ -25,6 +25,7 @@ export default function QuestionThread() {
   const navigate = useNavigate();
   const [newAnswer, setNewAnswer] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
   const aiRequestedRef = useRef<string | null>(null);
 
   const { data: question, isLoading } = useQuery({
@@ -135,6 +136,23 @@ export default function QuestionThread() {
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
     toast.success("Link copied to clipboard!");
+  };
+
+  const handleRegenerateAI = async () => {
+    if (!question || regenerating) return;
+    setRegenerating(true);
+    try {
+      const { error } = await supabase.functions.invoke("ai-answer", {
+        body: { questionId: id, title: question.title, body: question.body, regenerate: true },
+      });
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["answers", id] });
+      toast.success("AI answer regenerated!");
+    } catch (err: any) {
+      toast.error("Failed to regenerate: " + (err.message || "Unknown error"));
+    } finally {
+      setRegenerating(false);
+    }
   };
 
   if (isLoading) {
@@ -254,9 +272,16 @@ export default function QuestionThread() {
 
                       <div className="mt-4 flex items-center justify-between flex-wrap gap-2">
                         <span className="text-xs text-muted-foreground">{(answer as any).author_name} · {formatDistanceToNow(new Date(answer.created_at), { addSuffix: true })}</span>
-                        {(isOwner || isTeacher) && !answer.is_accepted && (
-                          <Button variant="ghost" size="sm" onClick={() => handleAccept(answer.id)} className="text-secondary hover:text-secondary"><CheckCircle className="mr-1 h-3 w-3" /> Accept</Button>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {answer.is_ai && (
+                            <Button variant="ghost" size="sm" onClick={handleRegenerateAI} disabled={regenerating} className="text-primary hover:text-primary/80 text-xs h-7 gap-1">
+                              {regenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Regenerate
+                            </Button>
+                          )}
+                          {(isOwner || isTeacher) && !answer.is_accepted && (
+                            <Button variant="ghost" size="sm" onClick={() => handleAccept(answer.id)} className="text-secondary hover:text-secondary"><CheckCircle className="mr-1 h-3 w-3" /> Accept</Button>
+                          )}
+                        </div>
                       </div>
 
                       <CommentThread answerId={answer.id} />
