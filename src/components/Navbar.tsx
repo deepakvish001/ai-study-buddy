@@ -128,6 +128,13 @@ export default function Navbar() {
                   </Button>
                 </Link>
               )}
+              {isAdmin && (
+                <Link to="/admin">
+                  <Button variant="ghost" size="sm" className={isActive("/admin") ? activeClass : inactiveClass}>
+                    <Settings className="mr-1 h-4 w-4" /> Admin
+                  </Button>
+                </Link>
+              )}
               <Link to="/profile">
                 <Button variant="ghost" size="icon" className={isActive("/profile") ? activeClass : inactiveClass}>
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary">{initials}</div>

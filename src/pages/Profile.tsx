@@ -155,7 +155,7 @@ export default function Profile() {
         </Card>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card className="bg-card border-border">
             <CardContent className="py-4 text-center">
               <div className="text-2xl font-bold text-foreground">{stats?.questions ?? 0}</div>
@@ -174,7 +174,25 @@ export default function Profile() {
               <div className="text-xs text-muted-foreground">Reputation</div>
             </CardContent>
           </Card>
+          {(hasRole("teacher") || hasRole("admin")) && (
+            <Card className="bg-card border-border">
+              <CardContent className="py-4 text-center">
+                <div className="text-2xl font-bold text-secondary">{reviewsCompleted ?? 0}</div>
+                <div className="text-xs text-muted-foreground">Reviews</div>
+              </CardContent>
+            </Card>
+          )}
         </div>
+
+        {hasRole("admin") && (
+          <div className="mb-8">
+            <Link to="/admin">
+              <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/10">
+                <Shield className="mr-2 h-4 w-4" /> Go to Admin Dashboard
+              </Button>
+            </Link>
+          </div>
+        )}
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="bg-card border-border">
