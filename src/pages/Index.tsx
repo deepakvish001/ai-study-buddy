@@ -94,21 +94,21 @@ export default function Index() {
 
       {/* Stats */}
       <section className="border-y border-border/50 bg-card/30 py-8">
-        <div className="container mx-auto grid grid-cols-3 gap-8 px-4 text-center">
+        <div className="container mx-auto grid grid-cols-3 gap-4 sm:gap-8 px-4 text-center">
           <div>
-            <div className="text-3xl font-bold text-foreground">{stats?.questions ?? 0}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-foreground">{stats?.questions ?? 0}</div>
             <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
               <Users className="h-3 w-3" /> Questions Asked
             </div>
           </div>
           <div>
-            <div className="text-3xl font-bold text-primary">{stats?.aiAnswers ?? 0}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-primary">{stats?.aiAnswers ?? 0}</div>
             <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
               <Zap className="h-3 w-3" /> AI Answers
             </div>
           </div>
           <div>
-            <div className="text-3xl font-bold text-secondary">{"< 10s"}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-secondary">{"< 10s"}</div>
             <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
               <Clock className="h-3 w-3" /> Avg Response
             </div>
