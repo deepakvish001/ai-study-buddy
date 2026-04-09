@@ -252,7 +252,15 @@ export default function QuestionThread() {
             const currentVote = userVotes?.[answer.id];
             const isPendingAI = answer.is_ai && answer.status === "pending";
             return (
-              <Card key={answer.id} className={`border-border ${answer.is_accepted ? "border-secondary/50 glow-green" : ""} ${answer.is_ai ? "border-primary/30 glow-orange" : ""}`}>
+              <Card key={answer.id} className={`border-border ${isPendingAI ? "opacity-80 border-dashed border-primary/40" : ""} ${answer.is_accepted ? "border-secondary/50 glow-green" : ""} ${answer.is_ai && !isPendingAI ? "border-primary/30 glow-orange" : ""}`}>
+                {isPendingAI && (
+                  <div className="px-4 pt-3 sm:px-6 sm:pt-4">
+                    <div className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 text-xs text-primary">
+                      <Clock className="h-3.5 w-3.5 shrink-0" />
+                      <span>Awaiting teacher review — only visible to you{isTeacher ? " (teacher/admin)" : " (question owner)"}.</span>
+                    </div>
+                  </div>
+                )}
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex items-start gap-3 sm:gap-4">
                     <div className="flex flex-col items-center gap-1 pt-1">
