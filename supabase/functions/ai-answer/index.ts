@@ -108,7 +108,7 @@ Use "low" if the question is ambiguous, complex, or you are unsure.`;
       answerText = answerText.replace(/\n?CONFIDENCE:\s*(high|medium|low)/i, "").trim();
     }
 
-    const status = confidence === "low" ? "pending" : "approved";
+    const status = "pending";
 
     const { error: insertError } = await supabase.from("answers").insert({
       question_id: questionId,
