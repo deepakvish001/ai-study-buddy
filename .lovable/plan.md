@@ -1,72 +1,104 @@
 
 
-# Student Doubt Solver — Phase 1 MVP
+# Improve All Existing Features
 
-## Design System
-- **Dark theme**: Deep black background (`#0A0A0A`), dark cards (`#141414`)
-- **Primary accent**: Orange (`#F97316`) for CTAs, highlights, AI badges
-- **Secondary**: Green (`#22C55E`) for success states, verified badges, upvotes
-- **Text**: White (`#FFFFFF`) headings, light gray (`#A1A1AA`) body text
-- **Modern, clean UI** with subtle borders and rounded cards
+## Overview
+Polish and enhance every major feature across the app: auth, navigation, question flow, answers, voting, teacher review, profile, browse, and file uploads.
 
-## Pages & Layout
+---
 
-### 1. Landing Page
-- Hero section with search bar front and center — "What's your doubt?"
-- Popular topics/tags grid
-- Recent questions feed
-- Stats bar (questions answered, avg response time)
+## 1. Authentication (Auth.tsx)
+- Add password visibility toggle (eye icon)
+- Add password strength indicator on sign-up (weak/medium/strong bar)
+- Show loading spinner instead of plain "Loading..." text
+- Redirect authenticated users away from /auth automatically
+- Add Google OAuth sign-in button
 
-### 2. Auth (Sign Up / Login)
-- Email/password authentication via Lovable Cloud
-- Role selection on signup (Student or Teacher)
-- User roles stored in separate `user_roles` table (security best practice)
+## 2. Navigation (Navbar.tsx)
+- Highlight the active route link (use `useLocation` to match current path)
+- Show user avatar/initials instead of generic User icon on desktop
+- Add notification dot on Review link showing pending count for teachers
+- Smooth close animation on mobile sheet after navigation
 
-### 3. Ask Question Page
-- Title + rich description editor with tag selection
-- **Real-time similar question suggestions** as user types (basic text search for MVP)
-- Submit triggers AI auto-answer via Lovable AI Gateway
+## 3. Landing Page (Index.tsx)
+- Add skeleton loaders for stats and recent questions while loading
+- Add answer count to each recent question card
+- Show relative time ("2 hours ago") on recent questions
+- Add animated counter for stats section
+- Add a "How it works" section (3 steps: Ask → AI Answers → Teacher Verifies)
 
-### 4. Question Thread Page
-- Question display with tags, author info, timestamps
-- **AI-generated answer** prominently displayed with "AI" badge (orange)
-- Other answers section (manual answers from users/teachers)
-- Upvote/downvote on answers
-- Accept answer button (for question owner & teachers)
-- Comment thread on each answer
+## 4. Browse Page (Browse.tsx)
+- Add sort options (newest, most answers, unanswered)
+- Add skeleton loading states instead of plain "Loading..." text
+- Show author name on question cards (already fetching user_id, map profiles)
+- Add pagination or "Load more" instead of hard limit of 50
+- Debounce search input so it auto-searches without needing to click Search
 
-### 5. Browse / Search Page
-- List of all questions with filters (tag, status, date)
-- Search bar with text-based search
+## 5. Ask Question (AskQuestion.tsx)
+- Add character count for title and body
+- Preview mode toggle to see markdown rendering before posting
+- Drag-and-drop support for file uploads
+- Disable submit if user has no verified email
+- Show estimated AI response time
 
-### 6. Teacher Review Queue
-- List of AI answers flagged as low-confidence
-- Edit & approve workflow for teachers
-- "Verified by Teacher" green badge on approved answers
+## 6. Question Thread (QuestionThread.tsx)
+- Fix voting logic: currently always increments without checking previous vote state. Track user's existing vote and toggle correctly
+- Add comment/discussion thread under each answer (the `comments` table exists but is unused)
+- Add "Share" button to copy question URL
+- Add markdown preview for the answer input textarea
+- Show loading skeleton instead of just a spinner
+- Add scroll-to-answer when navigating from a notification
+- Render question body with MarkdownRenderer too (not just plain text)
 
-### 7. User Profile Page
-- Activity feed (questions asked, answers given)
-- Reputation score display
-- Role badge (Student/Teacher)
+## 7. Teacher Review (TeacherReview.tsx)
+- Add markdown preview while editing (split view: edit left, preview right)
+- Add batch approve/reject functionality
+- Show question body context (not just title) so teachers have full context
+- Add filter by confidence level (low/medium)
+- Add count badge per confidence level
 
-## Database (Lovable Cloud)
-- `profiles` — id, display_name, avatar_url, bio
-- `user_roles` — user_id, role (student/teacher/admin)
-- `questions` — id, user_id, title, body, tags, status, created_at
-- `answers` — id, question_id, user_id, body, is_ai, sources_json, confidence, upvotes, downvotes, is_accepted, status (approved/pending), created_at
-- `comments` — id, answer_id, user_id, body, created_at
-- `votes` — id, user_id, answer_id, vote_type (up/down)
-- RLS policies on all tables
+## 8. Profile (Profile.tsx)
+- Add editable bio and display name (the fields exist in DB)
+- Add avatar upload using the existing storage bucket
+- Show reputation breakdown (hover tooltip: "+5 questions, +10 answers, etc.")
+- Add activity timeline/chart showing contributions over time
+- Show total questions asked and answers given as stats
 
-## AI Auto-Answer (Real)
-- Edge function calling Lovable AI Gateway (Gemini model)
-- System prompt instructs AI to act as an educational tutor, provide step-by-step explanations, and self-rate confidence (high/medium/low)
-- Low-confidence answers auto-flagged for teacher review
-- Answers streamed to the user in real-time
+## 9. File Upload (FileUpload.tsx)
+- Add drag-and-drop zone with visual feedback
+- Show upload progress bar per file
+- Add file size display on thumbnails
+- Image lightbox/preview on click
 
-## Key Interactions
-- Student posts question → AI generates answer in ~3-8 seconds with streaming
-- Teachers see review queue → can edit and approve AI answers
-- Users upvote/downvote → reputation system tracks contributions
-- Similar questions shown before posting to reduce duplicates
+## 10. Markdown Renderer (MarkdownRenderer.tsx)
+- Add syntax highlighting for code blocks (use `rehype-highlight` or `react-syntax-highlighter`)
+- Add copy button on code blocks
+- Add support for tables
+
+## 11. General UX
+- Add page transition animations (fade in/out)
+- Add scroll-to-top on route change
+- Add empty state illustrations instead of plain text
+- Add a footer with links
+
+---
+
+## Technical Details
+
+**Database migration needed:**
+- Add unique constraint on `votes(user_id, answer_id)` if not already present (for proper upsert)
+
+**New dependencies:**
+- `react-syntax-highlighter` or `rehype-highlight` for code syntax highlighting
+- `framer-motion` for page transitions (optional)
+
+**Files to modify:**
+- All page components (Index, Browse, Auth, AskQuestion, QuestionThread, TeacherReview, Profile)
+- Navbar.tsx, FileUpload.tsx, MarkdownRenderer.tsx
+- New component: CommentThread.tsx for answer comments
+- New component: ProfileEditDialog.tsx for editing bio/name/avatar
+
+**Edge function:** No changes needed.
+
+**Priority order:** Voting fix (bug) → Comments → Auth improvements → Browse sort/pagination → Profile editing → Code highlighting → Everything else.
 
