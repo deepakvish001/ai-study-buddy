@@ -50,6 +50,7 @@ export default function TeacherReview() {
   const filtered = pendingAnswers?.filter(a => filter === "all" || a.confidence === filter) ?? [];
   const lowCount = pendingAnswers?.filter(a => a.confidence === "low").length ?? 0;
   const medCount = pendingAnswers?.filter(a => a.confidence === "medium").length ?? 0;
+  const highCount = pendingAnswers?.filter(a => a.confidence === "high").length ?? 0;
 
   const handleApprove = async (answerId: string) => {
     const updates: any = { status: "approved" as const };
