@@ -1,104 +1,86 @@
 
 
-# Improve All Existing Features
+# End-to-End Login System for Teachers, Students & Admin
 
-## Overview
-Polish and enhance every major feature across the app: auth, navigation, question flow, answers, voting, teacher review, profile, browse, and file uploads.
+## Current State
+- Email/password sign-up + Google OAuth already working
+- All new users get "student" role automatically via DB trigger
+- Teacher/admin roles exist in `user_roles` table but can only be assigned via direct DB insert
+- No password reset flow, no role-based dashboards, no admin panel to manage users/roles
+
+---
+
+## 1. Password Reset Flow
+- Add "Forgot password?" link on the Auth page
+- Create `/reset-password` page that reads the recovery token from URL hash and lets users set a new password
+- Uses `supabase.auth.resetPasswordForEmail()` and `supabase.auth.updateUser()`
+
+## 2. Role-Based Post-Login Routing
+- After sign-in, redirect based on role:
+  - **Student** → `/browse` (or home)
+  - **Teacher** → `/review` (if pending answers exist) or `/browse`
+  - **Admin** → `/admin` dashboard
+- Show role badge on the auth page after login redirect
+
+## 3. Admin Dashboard (`/admin`)
+- Only accessible to users with "admin" role
+- **User management table**: list all profiles with their roles, reputation, join date
+- **Role assignment**: admin can promote/demote users (student ↔ teacher ↔ admin)
+  - Requires new RLS policy: admins can insert/delete on `user_roles`
+  - DB function `manage_role(target_user_id, role, action)` as SECURITY DEFINER to safely handle role changes
+- **Stats overview**: total users, questions, answers, pending reviews
+- **Pending review shortcut**: link to teacher review queue with count
+
+## 4. Teacher Onboarding
+- When a user is promoted to teacher, show a welcome toast/banner on next login
+- Add a "Teacher Guide" section on the review page explaining the review workflow
+
+## 5. Protected Routes & Guards
+- Create a `<ProtectedRoute>` wrapper component that checks auth + optional role
+- Wrap `/ask`, `/profile` with auth guard (redirect to `/auth` if not logged in)
+- Wrap `/review` with teacher/admin guard
+- Wrap `/admin` with admin guard
+- Show appropriate "Access Denied" page instead of blank redirects
+
+## 6. Profile Enhancements per Role
+- **Student profile**: show questions asked, answers received, reputation
+- **Teacher profile**: add "Reviews completed" stat (count of answers they approved/rejected)
+- **Admin profile**: add link to admin dashboard
+
+## 7. Auth Page Polish
+- Add role selector on sign-up: "I am a Student" (default) — teachers/admins are assigned by admin only, so add a note: "Want to become a teacher? Contact an admin"
+- Add email verification reminder banner for unverified users
 
 ---
 
-## 1. Authentication (Auth.tsx)
-- Add password visibility toggle (eye icon)
-- Add password strength indicator on sign-up (weak/medium/strong bar)
-- Show loading spinner instead of plain "Loading..." text
-- Redirect authenticated users away from /auth automatically
-- Add Google OAuth sign-in button
+## Database Changes
 
-## 2. Navigation (Navbar.tsx)
-- Highlight the active route link (use `useLocation` to match current path)
-- Show user avatar/initials instead of generic User icon on desktop
-- Add notification dot on Review link showing pending count for teachers
-- Smooth close animation on mobile sheet after navigation
+1. **Migration: Admin role management policies**
+   - RLS policy on `user_roles` allowing admins to INSERT and DELETE any row
+   - `manage_user_role` SECURITY DEFINER function for safe role changes
 
-## 3. Landing Page (Index.tsx)
-- Add skeleton loaders for stats and recent questions while loading
-- Add answer count to each recent question card
-- Show relative time ("2 hours ago") on recent questions
-- Add animated counter for stats section
-- Add a "How it works" section (3 steps: Ask → AI Answers → Teacher Verifies)
-
-## 4. Browse Page (Browse.tsx)
-- Add sort options (newest, most answers, unanswered)
-- Add skeleton loading states instead of plain "Loading..." text
-- Show author name on question cards (already fetching user_id, map profiles)
-- Add pagination or "Load more" instead of hard limit of 50
-- Debounce search input so it auto-searches without needing to click Search
-
-## 5. Ask Question (AskQuestion.tsx)
-- Add character count for title and body
-- Preview mode toggle to see markdown rendering before posting
-- Drag-and-drop support for file uploads
-- Disable submit if user has no verified email
-- Show estimated AI response time
-
-## 6. Question Thread (QuestionThread.tsx)
-- Fix voting logic: currently always increments without checking previous vote state. Track user's existing vote and toggle correctly
-- Add comment/discussion thread under each answer (the `comments` table exists but is unused)
-- Add "Share" button to copy question URL
-- Add markdown preview for the answer input textarea
-- Show loading skeleton instead of just a spinner
-- Add scroll-to-answer when navigating from a notification
-- Render question body with MarkdownRenderer too (not just plain text)
-
-## 7. Teacher Review (TeacherReview.tsx)
-- Add markdown preview while editing (split view: edit left, preview right)
-- Add batch approve/reject functionality
-- Show question body context (not just title) so teachers have full context
-- Add filter by confidence level (low/medium)
-- Add count badge per confidence level
-
-## 8. Profile (Profile.tsx)
-- Add editable bio and display name (the fields exist in DB)
-- Add avatar upload using the existing storage bucket
-- Show reputation breakdown (hover tooltip: "+5 questions, +10 answers, etc.")
-- Add activity timeline/chart showing contributions over time
-- Show total questions asked and answers given as stats
-
-## 9. File Upload (FileUpload.tsx)
-- Add drag-and-drop zone with visual feedback
-- Show upload progress bar per file
-- Add file size display on thumbnails
-- Image lightbox/preview on click
-
-## 10. Markdown Renderer (MarkdownRenderer.tsx)
-- Add syntax highlighting for code blocks (use `rehype-highlight` or `react-syntax-highlighter`)
-- Add copy button on code blocks
-- Add support for tables
-
-## 11. General UX
-- Add page transition animations (fade in/out)
-- Add scroll-to-top on route change
-- Add empty state illustrations instead of plain text
-- Add a footer with links
+2. **Migration: Add review stats tracking**
+   - Add `reviews_completed` column to `profiles` (default 0)
+   - Trigger on `answers` table: when status changes from 'pending' to 'approved'/'rejected', increment the reviewer's count
 
 ---
+
+## Files to Create
+- `src/pages/ResetPassword.tsx` — password reset form
+- `src/pages/Admin.tsx` — admin dashboard with user/role management
+- `src/components/ProtectedRoute.tsx` — auth + role guard wrapper
+
+## Files to Modify
+- `src/pages/Auth.tsx` — add forgot password link, role info note
+- `src/App.tsx` — add new routes, wrap with ProtectedRoute
+- `src/lib/auth.tsx` — add helper for post-login redirect logic
+- `src/components/Navbar.tsx` — add Admin link for admin users
+- `src/pages/Profile.tsx` — add role-specific stats
+- `src/pages/TeacherReview.tsx` — track who approved/rejected
 
 ## Technical Details
-
-**Database migration needed:**
-- Add unique constraint on `votes(user_id, answer_id)` if not already present (for proper upsert)
-
-**New dependencies:**
-- `react-syntax-highlighter` or `rehype-highlight` for code syntax highlighting
-- `framer-motion` for page transitions (optional)
-
-**Files to modify:**
-- All page components (Index, Browse, Auth, AskQuestion, QuestionThread, TeacherReview, Profile)
-- Navbar.tsx, FileUpload.tsx, MarkdownRenderer.tsx
-- New component: CommentThread.tsx for answer comments
-- New component: ProfileEditDialog.tsx for editing bio/name/avatar
-
-**Edge function:** No changes needed.
-
-**Priority order:** Voting fix (bug) → Comments → Auth improvements → Browse sort/pagination → Profile editing → Code highlighting → Everything else.
+- Password reset uses Supabase built-in `resetPasswordForEmail` with redirect to `/reset-password`
+- Role management uses SECURITY DEFINER function to bypass RLS safely
+- Protected routes use `useAuth()` hook to check roles before rendering
+- Admin dashboard queries profiles + user_roles tables with joins
 
