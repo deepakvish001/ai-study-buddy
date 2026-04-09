@@ -9,9 +9,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Zap, ThumbsUp, ThumbsDown, CheckCircle, Shield, Loader2, MessageSquare, Send } from "lucide-react";
+import { Zap, ThumbsUp, ThumbsDown, CheckCircle, Shield, Loader2, MessageSquare, Send, FileText, Image as ImageIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
+
+interface Attachment {
+  name: string;
+  url: string;
+  type: string;
+}
 
 export default function QuestionThread() {
   const { id } = useParams<{ id: string }>();
@@ -58,7 +64,7 @@ export default function QuestionThread() {
       return data.map(a => ({ ...a, author_name: a.user_id ? profileMap[a.user_id] ?? "Anonymous" : "AI Bot" }));
     },
     enabled: !!id,
-    refetchInterval: 5000, // Poll for AI answer
+    refetchInterval: 5000,
   });
 
   const handleVote = async (answerId: string, type: "up" | "down") => {
@@ -68,8 +74,6 @@ export default function QuestionThread() {
       { onConflict: "user_id,answer_id" }
     );
     if (error) { toast.error(error.message); return; }
-
-    // Update answer vote counts
     const answer = answers?.find((a) => a.id === answerId);
     if (answer) {
       await supabase.from("answers").update({
@@ -82,7 +86,6 @@ export default function QuestionThread() {
 
   const handleAccept = async (answerId: string) => {
     if (!user) return;
-    // Unaccept all then accept this one
     await supabase.from("answers").update({ is_accepted: false }).eq("question_id", id!);
     await supabase.from("answers").update({ is_accepted: true }).eq("id", answerId);
     await supabase.from("questions").update({ status: "resolved" as any }).eq("id", id!);
@@ -133,16 +136,17 @@ export default function QuestionThread() {
 
   const isOwner = user?.id === question.user_id;
   const isTeacher = hasRole("teacher") || hasRole("admin");
+  const questionAttachments: Attachment[] = Array.isArray(question.attachments) ? (question.attachments as unknown as Attachment[]) : [];
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto max-w-4xl px-4 py-10">
+      <div className="container mx-auto max-w-4xl px-4 py-6 sm:py-10">
         {/* Question */}
         <div className="mb-8">
           <div className="flex items-start gap-3">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
                 {question.status === "resolved" && (
                   <Badge className="bg-secondary/10 text-secondary border-0">
                     <CheckCircle className="mr-1 h-3 w-3" /> Resolved
@@ -152,9 +156,30 @@ export default function QuestionThread() {
                   <Badge variant="outline" className="border-primary/30 text-primary">Open</Badge>
                 )}
               </div>
-              <h1 className="text-2xl font-bold text-foreground mb-3">{question.title}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-3">{question.title}</h1>
               <p className="text-muted-foreground whitespace-pre-wrap">{question.body}</p>
-              <div className="mt-4 flex items-center gap-3">
+
+              {/* Attachments */}
+              {questionAttachments.length > 0 && (
+                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {questionAttachments.map((att, i) => (
+                    <a key={i} href={att.url} target="_blank" rel="noopener noreferrer" className="block rounded-lg border border-border bg-card overflow-hidden hover:border-primary/30 transition-colors">
+                      {att.type?.startsWith("image/") ? (
+                        <img src={att.url} alt={att.name} className="w-full h-28 object-cover" />
+                      ) : (
+                        <div className="flex items-center justify-center h-28 bg-muted/50">
+                          <FileText className="h-8 w-8 text-primary" />
+                        </div>
+                      )}
+                      <div className="p-2">
+                        <p className="text-xs text-muted-foreground truncate">{att.name}</p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-4 flex items-center gap-3 flex-wrap">
                 {question.tags?.map((t: string) => (
                   <Badge key={t} variant="outline" className="border-border text-muted-foreground">{t}</Badge>
                 ))}
@@ -183,22 +208,22 @@ export default function QuestionThread() {
 
           {answers?.map((answer) => (
             <Card key={answer.id} className={`border-border ${answer.is_accepted ? "border-secondary/50 glow-green" : ""} ${answer.is_ai ? "border-primary/30 glow-orange" : ""}`}>
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-start gap-3 sm:gap-4">
                   {/* Vote buttons */}
                   <div className="flex flex-col items-center gap-1 pt-1">
                     <button onClick={() => handleVote(answer.id, "up")} className="text-muted-foreground hover:text-secondary transition-colors">
-                      <ThumbsUp className="h-5 w-5" />
+                      <ThumbsUp className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
                     <span className="text-sm font-medium text-foreground">{answer.upvotes - answer.downvotes}</span>
                     <button onClick={() => handleVote(answer.id, "down")} className="text-muted-foreground hover:text-destructive transition-colors">
-                      <ThumbsDown className="h-5 w-5" />
+                      <ThumbsDown className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
                   </div>
 
                   <div className="flex-1 min-w-0">
                     {/* Badges */}
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
                       {answer.is_ai && (
                         <Badge className="bg-primary/10 text-primary border-primary/20">
                           <Zap className="mr-1 h-3 w-3" /> AI Answer
@@ -228,10 +253,8 @@ export default function QuestionThread() {
                       )}
                     </div>
 
-                    {/* Answer body */}
                     <MarkdownRenderer content={answer.body} />
 
-                    {/* Sources */}
                     {answer.sources_json && Array.isArray(answer.sources_json) && (answer.sources_json as any[]).length > 0 && (
                       <div className="mt-4 p-3 rounded-lg bg-muted/50">
                         <p className="text-xs font-medium text-muted-foreground mb-1">Sources:</p>
@@ -241,8 +264,7 @@ export default function QuestionThread() {
                       </div>
                     )}
 
-                    {/* Meta */}
-                    <div className="mt-4 flex items-center justify-between">
+                    <div className="mt-4 flex items-center justify-between flex-wrap gap-2">
                       <span className="text-xs text-muted-foreground">
                         {(answer as any).author_name} · {formatDistanceToNow(new Date(answer.created_at), { addSuffix: true })}
                       </span>
