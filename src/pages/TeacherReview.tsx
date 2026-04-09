@@ -50,6 +50,7 @@ export default function TeacherReview() {
   const filtered = pendingAnswers?.filter(a => filter === "all" || a.confidence === filter) ?? [];
   const lowCount = pendingAnswers?.filter(a => a.confidence === "low").length ?? 0;
   const medCount = pendingAnswers?.filter(a => a.confidence === "medium").length ?? 0;
+  const highCount = pendingAnswers?.filter(a => a.confidence === "high").length ?? 0;
 
   const handleApprove = async (answerId: string) => {
     const updates: any = { status: "approved" as const };
@@ -96,9 +97,10 @@ export default function TeacherReview() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="low">Low ({lowCount})</SelectItem>
-              <SelectItem value="medium">Medium ({medCount})</SelectItem>
+              <SelectItem value="all">All ({pendingAnswers?.length ?? 0})</SelectItem>
+              <SelectItem value="low">🔴 Low ({lowCount})</SelectItem>
+              <SelectItem value="medium">🟡 Medium ({medCount})</SelectItem>
+              <SelectItem value="high">🟢 High ({highCount})</SelectItem>
             </SelectContent>
           </Select>
           {selected.size > 0 && (
@@ -128,8 +130,8 @@ export default function TeacherReview() {
                 <div className="flex items-center gap-2 mb-1">
                   <input type="checkbox" checked={selected.has(answer.id)} onChange={() => toggleSelect(answer.id)} className="accent-primary h-4 w-4" />
                   <Badge className="bg-primary/10 text-primary border-primary/20"><Zap className="mr-1 h-3 w-3" /> AI Answer</Badge>
-                  {answer.confidence && (
-                    <Badge variant="outline" className={`text-xs ${answer.confidence === "low" ? "border-destructive/30 text-destructive" : "border-primary/30 text-primary"}`}>{answer.confidence} confidence</Badge>
+                   {answer.confidence && (
+                    <Badge variant="outline" className={`text-xs ${answer.confidence === "low" ? "border-destructive/30 text-destructive" : answer.confidence === "high" ? "border-secondary/30 text-secondary" : "border-primary/30 text-primary"}`}>{answer.confidence} confidence</Badge>
                   )}
                 </div>
                 <CardTitle className="text-sm">
