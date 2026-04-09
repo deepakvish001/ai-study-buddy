@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Shield, Zap, CheckCircle, X, Edit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
 
 export default function TeacherReview() {
   const { hasRole } = useAuth();
@@ -34,7 +35,7 @@ export default function TeacherReview() {
     queryFn: async () => {
       const { data } = await supabase
         .from("answers")
-        .select("*, questions(id, title), profiles(display_name)")
+        .select("*, questions(id, title)")
         .eq("status", "pending")
         .eq("is_ai", true)
         .order("created_at", { ascending: true });
@@ -117,7 +118,7 @@ export default function TeacherReview() {
                     className="min-h-[150px] bg-muted border-border text-foreground mb-4"
                   />
                 ) : (
-                  <p className="text-foreground whitespace-pre-wrap mb-4">{answer.body}</p>
+                  <MarkdownRenderer content={answer.body} />
                 )}
                 <div className="flex gap-2">
                   <Button onClick={() => handleApprove(answer.id)} size="sm" className="bg-secondary text-secondary-foreground hover:bg-secondary/90">

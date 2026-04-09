@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Zap, ThumbsUp, ThumbsDown, CheckCircle, Shield, Loader2, MessageSquare, Send } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
 
 export default function QuestionThread() {
   const { id } = useParams<{ id: string }>();
@@ -228,7 +229,7 @@ export default function QuestionThread() {
                     </div>
 
                     {/* Answer body */}
-                    <div className="text-foreground whitespace-pre-wrap">{answer.body}</div>
+                    <MarkdownRenderer content={answer.body} />
 
                     {/* Sources */}
                     {answer.sources_json && Array.isArray(answer.sources_json) && (answer.sources_json as any[]).length > 0 && (

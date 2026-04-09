@@ -4,12 +4,25 @@ import { useAuth } from "@/lib/auth";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, MessageSquare, ThumbsUp, Zap, Shield } from "lucide-react";
+import { User, MessageSquare, ThumbsUp, Zap, Shield, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 
 export default function Profile() {
   const { user, profile, roles } = useAuth();
+
+  const { data: reputation } = useQuery({
+    queryKey: ["reputation", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("reputation")
+        .eq("user_id", user!.id)
+        .single();
+      return data?.reputation ?? 0;
+    },
+    enabled: !!user,
+  });
 
   const { data: myQuestions } = useQuery({
     queryKey: ["my-questions", user?.id],
@@ -71,8 +84,13 @@ export default function Profile() {
                     {r.charAt(0).toUpperCase() + r.slice(1)}
                   </Badge>
                 ))}
+                </div>
+                <div className="mt-3 flex items-center gap-2 text-sm">
+                  <Star className="h-4 w-4 text-primary" />
+                  <span className="font-semibold text-foreground">{reputation ?? 0}</span>
+                  <span className="text-muted-foreground">reputation points</span>
+                </div>
               </div>
-            </div>
           </CardContent>
         </Card>
 
