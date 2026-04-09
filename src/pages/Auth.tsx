@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { Zap, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
@@ -87,9 +87,7 @@ export default function Auth() {
       <div className="flex items-center justify-center py-20 px-4">
         <Card className="w-full max-w-md bg-card border-border">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-              <Zap className="h-6 w-6 text-primary-foreground" />
-            </div>
+            <img src="/favicon.png" alt="DoubtSolver" className="mx-auto mb-4 h-12 w-12 rounded-xl" />
             <CardTitle className="text-2xl text-foreground">
               {isSignUp ? "Create Account" : "Welcome Back"}
             </CardTitle>
