@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Zap, LogOut, BookOpen, Shield, Menu, Settings } from "lucide-react";
+import { Zap, LogOut, BookOpen, Shield, Menu, Settings, Trophy } from "lucide-react";
 
 export default function Navbar() {
   const { user, profile, hasRole, signOut } = useAuth();
@@ -45,6 +45,11 @@ export default function Navbar() {
       <Link to="/browse" onClick={close}>
         <Button variant="ghost" size="sm" className={`w-full justify-start ${isActive("/browse") ? activeClass : inactiveClass}`}>
           <BookOpen className="mr-2 h-4 w-4" /> Browse
+        </Button>
+      </Link>
+      <Link to="/leaderboard" onClick={close}>
+        <Button variant="ghost" size="sm" className={`w-full justify-start ${isActive("/leaderboard") ? activeClass : inactiveClass}`}>
+          <Trophy className="mr-2 h-4 w-4" /> Leaderboard
         </Button>
       </Link>
 
@@ -109,6 +114,11 @@ export default function Navbar() {
           <Link to="/browse">
             <Button variant="ghost" size="sm" className={isActive("/browse") ? activeClass : inactiveClass}>
               <BookOpen className="mr-1 h-4 w-4" /> Browse
+            </Button>
+          </Link>
+          <Link to="/leaderboard">
+            <Button variant="ghost" size="sm" className={isActive("/leaderboard") ? activeClass : inactiveClass}>
+              <Trophy className="mr-1 h-4 w-4" /> Leaderboard
             </Button>
           </Link>
           {user && (
