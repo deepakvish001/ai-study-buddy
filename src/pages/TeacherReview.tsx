@@ -97,9 +97,10 @@ export default function TeacherReview() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="low">Low ({lowCount})</SelectItem>
-              <SelectItem value="medium">Medium ({medCount})</SelectItem>
+              <SelectItem value="all">All ({pendingAnswers?.length ?? 0})</SelectItem>
+              <SelectItem value="low">🔴 Low ({lowCount})</SelectItem>
+              <SelectItem value="medium">🟡 Medium ({medCount})</SelectItem>
+              <SelectItem value="high">🟢 High ({highCount})</SelectItem>
             </SelectContent>
           </Select>
           {selected.size > 0 && (
