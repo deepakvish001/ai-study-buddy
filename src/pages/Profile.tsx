@@ -91,6 +91,7 @@ export default function Profile() {
                   <span className="text-muted-foreground">reputation points</span>
                 </div>
               </div>
+          </CardContent>
         </Card>
 
         <div className="grid gap-6 md:grid-cols-2">
