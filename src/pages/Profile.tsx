@@ -240,3 +240,121 @@ export default function Profile() {
     </div>
   );
 }
+
+const REPUTATION_THRESHOLD = 75;
+
+function TeacherApplicationSection({ userId, reputation, isTeacher }: { userId: string; reputation: number; isTeacher: boolean }) {
+  const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: existingApp } = useQuery({
+    queryKey: ["teacher-application", userId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("teacher_applications")
+        .select("id, status, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      return data?.[0] ?? null;
+    },
+  });
+
+  // Don't show if already a teacher
+  if (isTeacher) return null;
+
+  const progress = Math.min(100, Math.round((reputation / REPUTATION_THRESHOLD) * 100));
+  const eligible = reputation >= REPUTATION_THRESHOLD;
+
+  const handleApply = async () => {
+    setSubmitting(true);
+    const { error } = await supabase.from("teacher_applications").insert({
+      user_id: userId,
+      message: message.trim() || null,
+    });
+    if (error) {
+      if (error.code === "23505") toast.error("You already have a pending application.");
+      else toast.error(error.message);
+    } else {
+      toast.success("Application submitted! An admin will review it.");
+      queryClient.invalidateQueries({ queryKey: ["teacher-application", userId] });
+    }
+    setSubmitting(false);
+  };
+
+  return (
+    <Card className="mb-8 bg-card border-border">
+      <CardHeader>
+        <CardTitle className="text-foreground flex items-center gap-2">
+          <GraduationCap className="h-5 w-5 text-secondary" /> Become a Teacher/Mentor
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {existingApp?.status === "pending" && (
+          <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/10">
+            <Clock className="h-5 w-5 text-primary shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Application Pending</p>
+              <p className="text-xs text-muted-foreground">
+                Submitted {formatDistanceToNow(new Date(existingApp.created_at), { addSuffix: true })}. An admin will review your application soon.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {existingApp?.status === "approved" && (
+          <div className="flex items-center gap-3 p-4 rounded-lg bg-secondary/5 border border-secondary/10">
+            <CheckCircle className="h-5 w-5 text-secondary shrink-0" />
+            <p className="text-sm font-medium text-foreground">Your application was approved! Reload to see your new role.</p>
+          </div>
+        )}
+
+        {existingApp?.status === "rejected" && (
+          <div className="flex items-center gap-3 p-4 rounded-lg bg-destructive/5 border border-destructive/10">
+            <p className="text-sm text-foreground">Your previous application was not approved. Keep building your reputation and try again!</p>
+          </div>
+        )}
+
+        {(!existingApp || existingApp.status === "rejected") && (
+          <>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Reputation Progress</span>
+                <span className={eligible ? "text-secondary font-bold" : "text-foreground font-medium"}>
+                  {reputation} / {REPUTATION_THRESHOLD}
+                </span>
+              </div>
+              <Progress value={progress} className="h-2" />
+              {!eligible && (
+                <p className="text-xs text-muted-foreground">
+                  You need {REPUTATION_THRESHOLD - reputation} more reputation points to apply. Ask questions, answer doubts, and earn upvotes!
+                </p>
+              )}
+            </div>
+
+            {eligible && (
+              <div className="space-y-3">
+                <Textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Tell us why you'd like to become a teacher/mentor (optional)..."
+                  className="bg-muted border-border text-foreground"
+                  rows={3}
+                />
+                <Button
+                  onClick={handleApply}
+                  disabled={submitting}
+                  className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                >
+                  {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GraduationCap className="mr-2 h-4 w-4" />}
+                  Apply for Teacher/Mentor
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
