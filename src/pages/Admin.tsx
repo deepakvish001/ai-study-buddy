@@ -223,3 +223,88 @@ export default function Admin() {
     </div>
   );
 }
+
+function TeacherApplicationsPanel({ queryClient }: { queryClient: any }) {
+  const { data: applications, isLoading } = useQuery({
+    queryKey: ["teacher-applications"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("teacher_applications")
+        .select("*")
+        .eq("status", "pending")
+        .order("created_at", { ascending: true });
+      if (!data?.length) return [];
+      const userIds = data.map((a) => a.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, reputation")
+        .in("user_id", userIds);
+      const profileMap: Record<string, any> = {};
+      profiles?.forEach((p) => { profileMap[p.user_id] = p; });
+      return data.map((a) => ({ ...a, profile: profileMap[a.user_id] }));
+    },
+  });
+
+  const handleDecision = async (appId: string, userId: string, decision: "approved" | "rejected") => {
+    const { error } = await supabase
+      .from("teacher_applications")
+      .update({ status: decision })
+      .eq("id", appId);
+    if (error) { toast.error(error.message); return; }
+
+    if (decision === "approved") {
+      const { error: roleError } = await supabase.rpc("manage_user_role", {
+        _target_user_id: userId,
+        _role: "teacher" as any,
+        _action: "add",
+      });
+      if (roleError) toast.error(roleError.message);
+      else toast.success("Application approved! User is now a teacher.");
+    } else {
+      toast.success("Application rejected.");
+    }
+    queryClient.invalidateQueries({ queryKey: ["teacher-applications"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+  };
+
+  if (isLoading) return <Skeleton className="h-32 w-full mb-8 rounded-xl" />;
+  if (!applications?.length) return null;
+
+  return (
+    <Card className="bg-card border-border mb-8">
+      <CardHeader>
+        <CardTitle className="text-foreground flex items-center gap-2">
+          <GraduationCap className="h-5 w-5 text-secondary" />
+          Teacher Applications
+          <Badge className="bg-secondary/10 text-secondary border-0">{applications.length} pending</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {applications.map((app: any) => (
+          <div key={app.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-lg bg-muted/30 border border-border/50">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary/10 text-sm font-bold text-secondary shrink-0">
+                {app.profile?.display_name?.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) || "U"}
+              </div>
+              <div className="min-w-0">
+                <p className="font-medium text-foreground truncate">{app.profile?.display_name || "User"}</p>
+                <p className="text-xs text-muted-foreground">
+                  Rep: {app.profile?.reputation ?? 0} · Applied {formatDistanceToNow(new Date(app.created_at), { addSuffix: true })}
+                </p>
+                {app.message && <p className="text-xs text-muted-foreground mt-1 italic">"{app.message}"</p>}
+              </div>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" onClick={() => handleDecision(app.id, app.user_id, "approved")} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
+                <CheckCircle className="mr-1 h-4 w-4" /> Approve
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => handleDecision(app.id, app.user_id, "rejected")} className="text-destructive hover:text-destructive">
+                <X className="mr-1 h-4 w-4" /> Reject
+              </Button>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
