@@ -67,6 +67,13 @@ export default function Navbar() {
               </Button>
             </Link>
           )}
+          {isAdmin && (
+            <Link to="/admin" onClick={close}>
+              <Button variant="ghost" size="sm" className={`w-full justify-start ${isActive("/admin") ? activeClass : inactiveClass}`}>
+                <Settings className="mr-2 h-4 w-4" /> Admin
+              </Button>
+            </Link>
+          )}
           <Link to="/profile" onClick={close}>
             <Button variant="ghost" size="sm" className={`w-full justify-start ${isActive("/profile") ? activeClass : inactiveClass}`}>
               <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">{initials}</div>
