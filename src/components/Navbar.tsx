@@ -5,8 +5,9 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Zap, LogOut, BookOpen, Shield, Menu, Settings, Trophy } from "lucide-react";
+import { LogOut, BookOpen, Shield, Menu, Settings, Trophy } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
+import logoImg from "/favicon.png";
 
 export default function Navbar() {
   const { user, profile, hasRole, signOut } = useAuth();
@@ -105,9 +106,7 @@ export default function Navbar() {
     <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <Zap className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <img src={logoImg} alt="DoubtSolver" className="h-9 w-9 rounded-lg" />
           <span className="text-xl font-bold text-foreground">DoubtSolver</span>
         </Link>
 
