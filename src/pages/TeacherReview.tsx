@@ -24,6 +24,8 @@ export default function TeacherReview() {
   const navigate = useNavigate();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBody, setEditBody] = useState("");
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
   const [filter, setFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -106,13 +108,19 @@ export default function TeacherReview() {
   };
 
   const handleReject = async (answerId: string) => {
+    if (rejectingId !== answerId) {
+      setRejectingId(answerId);
+      setRejectionReason("");
+      return;
+    }
     const { error } = await supabase.from("answers").update({
       status: "rejected" as const,
       reviewed_by: user?.id,
       reviewed_at: new Date().toISOString(),
-    }).eq("id", answerId);
+      rejection_reason: rejectionReason.trim() || null,
+    } as any).eq("id", answerId);
     if (error) toast.error(error.message);
-    else { toast.success("Answer rejected"); invalidateAll(); }
+    else { toast.success("Answer rejected"); setRejectingId(null); setRejectionReason(""); invalidateAll(); }
   };
 
   const handleBatchApprove = async () => {
