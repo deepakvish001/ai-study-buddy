@@ -38,6 +38,11 @@ export default function FileUpload({ userId, files, onChange, maxFiles = 5 }: Fi
     const remaining = maxFiles - files.length;
     if (remaining <= 0) { toast.error(`Max ${maxFiles} files allowed`); return; }
 
+    if (selected.length > remaining) {
+      const dropped = selected.length - remaining;
+      toast.error(`Only ${remaining} more file${remaining === 1 ? "" : "s"} can be added (max ${maxFiles}) — ${dropped} file${dropped === 1 ? "" : "s"} skipped`);
+    }
+
     setUploading(true);
     setProgress(0);
     const newFiles: UploadedFile[] = [];
