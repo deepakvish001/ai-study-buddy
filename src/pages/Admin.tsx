@@ -162,7 +162,7 @@ export default function Admin() {
                       </div>
                       {item.link && (
                         <Link to={item.link}>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0">
+                          <Button variant="ghost" size="icon" aria-label={`Open ${item.text}`} className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0">
                             <ExternalLink className="h-3 w-3" />
                           </Button>
                         </Link>
@@ -609,11 +609,11 @@ function ContentManagementPanel() {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <Link to={`/question/${q.id}`}>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary">
+                      <Button variant="ghost" size="icon" aria-label={`View question: ${q.title}`} className="h-7 w-7 text-muted-foreground hover:text-primary">
                         <Eye className="h-3.5 w-3.5" />
                       </Button>
                     </Link>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    <Button variant="ghost" size="icon" aria-label={`Delete question: ${q.title}`} className="h-7 w-7 text-muted-foreground hover:text-destructive"
                       onClick={() => setDeleteTarget({ type: "question", id: q.id, title: q.title })}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -648,7 +648,7 @@ function ContentManagementPanel() {
                               </div>
                               <p className="text-xs text-foreground line-clamp-2">{a.body}</p>
                             </div>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0"
+                            <Button variant="ghost" size="icon" aria-label="Delete this answer" className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0"
                               onClick={() => setDeleteTarget({ type: "answer", id: a.id, title: a.body.slice(0, 50) + "..." })}>
                               <Trash2 className="h-3 w-3" />
                             </Button>
