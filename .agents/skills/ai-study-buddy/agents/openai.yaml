@@ -1,0 +1,6 @@
+interface:
+  display_name: "Ai Study Buddy"
+  short_description: "Repo-specific patterns and workflows for ai-study-buddy"
+  default_prompt: "Use the ai-study-buddy repo skill to follow existing architecture, testing, and workflow conventions."
+policy:
+  allow_implicit_invocation: true
