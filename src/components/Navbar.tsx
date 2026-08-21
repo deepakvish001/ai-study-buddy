@@ -148,11 +148,11 @@ export default function Navbar() {
               )}
               <NotificationBell />
               <Link to="/profile">
-                <Button variant="ghost" size="icon" className={isActive("/profile") ? activeClass : inactiveClass}>
+                <Button variant="ghost" size="icon" aria-label="Your profile" className={isActive("/profile") ? activeClass : inactiveClass}>
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary">{initials}</div>
                 </Button>
               </Link>
-              <Button variant="ghost" size="icon" onClick={() => signOut().then(() => navigate("/"))} className={inactiveClass}>
+              <Button variant="ghost" size="icon" aria-label="Sign out" onClick={() => signOut().then(() => navigate("/"))} className={inactiveClass}>
                 <LogOut className="h-4 w-4" />
               </Button>
             </>
@@ -168,7 +168,7 @@ export default function Navbar() {
         <div className="md:hidden">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-muted-foreground">
+              <Button variant="ghost" size="icon" aria-label="Open menu" className="text-muted-foreground">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
